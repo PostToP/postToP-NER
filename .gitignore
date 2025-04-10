@@ -176,3 +176,4 @@ cython_debug/
 *.pkl
 dataset/
 *.txt
+spacy/
