@@ -1,5 +1,6 @@
 from features import FeatureExtraction
 from model import build_model, evaluate_model
+from text_cleaner import preprocess_tokens
 from vectorizer import VectorizerKerasTokenizer, VectorizerNER
 from tokenizer import *
 from dataset import convert_ner_tags, fix_dataset_NER, split_dataset
@@ -24,7 +25,10 @@ dataset["NER"] = ner_tags
 
 
 title_tokenizer = TokenizerCustom()
-dataset["Tokens"] = dataset["Title"].apply(lambda x: title_tokenizer.encode(x))
+dataset["Original Tokens"] = dataset["Title"].apply(
+    lambda x: title_tokenizer.encode(x))
+dataset["Tokens"] = dataset["Original Tokens"].apply(
+    lambda x: preprocess_tokens(x))
 print(dataset.iloc[0]["Title"])
 
 ner_vectorizer = VectorizerNER(MAX_SEQUENCE_LENGTH)
@@ -47,9 +51,9 @@ ner_val = np.array(list(ner_val))
 
 
 X_train_channel = FeatureExtraction.batch(FeatureExtraction.tokens_containing_channel_name,
-                                          train_df["Tokens"].values, train_df["Channel Name"].values)
+                                          train_df["Original Tokens"].values, train_df["Channel Name"].values)
 X_val_channel = FeatureExtraction.batch(FeatureExtraction.tokens_containing_channel_name,
-                                        validation_df["Tokens"].values, validation_df["Channel Name"].values)
+                                        validation_df["Original Tokens"].values, validation_df["Channel Name"].values)
 X_train_channel = pad_sequences(
     X_train_channel, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
 X_val_channel = pad_sequences(
