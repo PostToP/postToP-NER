@@ -1,3 +1,4 @@
+from features import FeatureExtraction
 from model import build_model, evaluate_model
 from vectorizer import VectorizerKerasTokenizer, VectorizerNER
 from tokenizer import *
@@ -45,28 +46,10 @@ ner_train = np.array(list(ner_train))
 ner_val = np.array(list(ner_val))
 
 
-def extract_feature_channel(token, channel_name):
-    feature = np.zeros(len(token), dtype=int)
-    channel_name = channel_name.lower()
-    token = [t.lower() for t in token]
-    for i, t in enumerate(token):
-        if t in channel_name:
-            if re.search(r'([一-龠ぁ-ゔァ-ヴーａ-ｚＡ-Ｚ０-９々〆〤]+|[a-zA-Z0-9]+)[.!]*', t):
-                feature[i] = 1
-    return feature
-
-
-def extract_feature_channel_batch(tokens, channel_names):
-    features = []
-    for i, (token, channel_name) in enumerate(zip(tokens, channel_names)):
-        features.append(extract_feature_channel(token, channel_name))
-    return features
-
-
-X_train_channel = extract_feature_channel_batch(
-    train_df["Tokens"].values, train_df["Channel Name"].values)
-X_val_channel = extract_feature_channel_batch(
-    validation_df["Tokens"].values, validation_df["Channel Name"].values)
+X_train_channel = FeatureExtraction.batch(FeatureExtraction.tokens_containing_channel_name,
+                                          train_df["Tokens"].values, train_df["Channel Name"].values)
+X_val_channel = FeatureExtraction.batch(FeatureExtraction.tokens_containing_channel_name,
+                                        validation_df["Tokens"].values, validation_df["Channel Name"].values)
 X_train_channel = pad_sequences(
     X_train_channel, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
 X_val_channel = pad_sequences(
