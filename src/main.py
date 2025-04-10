@@ -1,7 +1,7 @@
 from model import build_model, evaluate_model
 from vectorizer import VectorizerKerasTokenizer, VectorizerNER
 from tokenizer import *
-from dataset import convert_ner_tags, fix_dataset_NER
+from dataset import convert_ner_tags, fix_dataset_NER, split_dataset
 import re
 import numpy as np
 import pandas as pd
@@ -31,11 +31,7 @@ ner_vectorizer.train(dataset["NER"].values)
 dataset["NER"] = dataset["NER"].apply(
     lambda x: ner_vectorizer.encode(x))
 
-
-train_df = dataset.sample(frac=0.8, random_state=42)
-validation_df = dataset.drop(train_df.index)
-train_df = train_df.reset_index(drop=True)
-validation_df = validation_df.reset_index(drop=True)
+train_df, validation_df = split_dataset(dataset, fraction=0.8, random_state=42)
 
 
 title_vectorizer = VectorizerKerasTokenizer(VOCAB_SIZE, MAX_SEQUENCE_LENGTH)

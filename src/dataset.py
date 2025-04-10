@@ -57,3 +57,11 @@ def convert_ner_tags(titles, ner_dict: list[dict]):
         numeric_tags.append(new_tags)
 
     return numeric_tags
+
+
+def split_dataset(dataset, fraction=0.8, random_state=42):
+    train_df = dataset.sample(frac=fraction, random_state=random_state)
+    validation_df = dataset.drop(train_df.index)
+    train_df = train_df.reset_index(drop=True)
+    validation_df = validation_df.reset_index(drop=True)
+    return train_df, validation_df
