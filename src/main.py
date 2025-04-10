@@ -6,8 +6,6 @@ import re
 import numpy as np
 import pandas as pd
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from sklearn.metrics import f1_score
-
 
 VOCAB_SIZE = 50
 MAX_SEQUENCE_LENGTH = 45
@@ -17,7 +15,7 @@ dataset = dataset[dataset["NER"].isna() == False]
 dataset = dataset[['Channel Name', 'Title', 'NER']]
 
 
-datset = fix_dataset_NER(dataset)
+dataset = fix_dataset_NER(dataset)
 
 
 ner_tags = convert_ner_tags(dataset["Title"].values, dataset["NER"].values)
