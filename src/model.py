@@ -2,26 +2,25 @@ from sklearn.metrics import f1_score
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import Embedding, Dense, Dropout, Bidirectional, GRU, Input, Concatenate, TimeDistributed
+from tensorflow.keras.models import Model
 
 
 def build_model(train_data, train_labels, val_data, val_labels, input_sequence_length, vocab_size, num_classes):
-    token_input = tf.keras.layers.Input(
-        shape=(input_sequence_length,), name="token_input", dtype=tf.float32)
-    x = tf.keras.layers.Embedding(
-        input_dim=vocab_size, output_dim=45, name="token_embedding")(token_input)
+    token_input = Input(shape=(input_sequence_length,),
+                        name="token_input", dtype=tf.float32)
+    x = Embedding(input_dim=vocab_size, output_dim=45,
+                  name="token_embedding")(token_input)
 
-    channel_feature_input = tf.keras.layers.Input(
-        shape=(input_sequence_length, 1), name="channel_feature_input", dtype=tf.float32)
+    channel_feature_input = Input(shape=(
+        input_sequence_length, 1), name="channel_feature_input", dtype=tf.float32)
 
-    x = tf.keras.layers.Concatenate()([x, channel_feature_input])
-    x = tf.keras.layers.Bidirectional(tf.keras.layers.GRU(
-        64, return_sequences=True), name="bigru")(x)
+    x = Concatenate()([x, channel_feature_input])
+    x = Bidirectional(GRU(64, return_sequences=True), name="bigru")(x)
 
-    x = tf.keras.layers.Dropout(0.2)(x)
-    x = tf.keras.layers.TimeDistributed(
-        tf.keras.layers.Dense(num_classes, activation='softmax'))(x)
-    model = tf.keras.Model(
-        inputs=[token_input, channel_feature_input], outputs=x)
+    x = Dropout(0.2)(x)
+    x = TimeDistributed(Dense(num_classes, activation='softmax'))(x)
+    model = Model(inputs=[token_input, channel_feature_input], outputs=x)
     anti_overfit = EarlyStopping(
         monitor='val_loss', patience=10, restore_best_weights=True, min_delta=0.005, mode="min")
     model.compile(optimizer="adam",
