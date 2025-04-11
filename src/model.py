@@ -8,14 +8,12 @@ def build_model(train_data, train_labels, val_data, val_labels, input_sequence_l
     token_input = tf.keras.layers.Input(
         shape=(input_sequence_length,), name="token_input", dtype=tf.float32)
     x = tf.keras.layers.Embedding(
-        input_dim=vocab_size, output_dim=64, name="token_embedding")(token_input)
+        input_dim=vocab_size, output_dim=45, name="token_embedding")(token_input)
 
-    channel_feauter_input = tf.keras.layers.Input(
-        shape=(input_sequence_length,), name="channel_feature_input", dtype=tf.float32)
-    channel_embedding = tf.keras.layers.Embedding(
-        input_dim=2, output_dim=64, name="channel_embedding")(channel_feauter_input)
+    channel_feature_input = tf.keras.layers.Input(
+        shape=(input_sequence_length, 1), name="channel_feature_input", dtype=tf.float32)
 
-    x = tf.keras.layers.Concatenate()([x, channel_embedding])
+    x = tf.keras.layers.Concatenate()([x, channel_feature_input])
     x = tf.keras.layers.Bidirectional(tf.keras.layers.GRU(
         64, return_sequences=True), name="bigru")(x)
 
@@ -23,7 +21,7 @@ def build_model(train_data, train_labels, val_data, val_labels, input_sequence_l
     x = tf.keras.layers.TimeDistributed(
         tf.keras.layers.Dense(num_classes, activation='softmax'))(x)
     model = tf.keras.Model(
-        inputs=[token_input, channel_feauter_input], outputs=x)
+        inputs=[token_input, channel_feature_input], outputs=x)
     anti_overfit = EarlyStopping(
         monitor='val_loss', patience=10, restore_best_weights=True, min_delta=0.005, mode="min")
     model.compile(optimizer="adam",
