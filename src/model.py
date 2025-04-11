@@ -63,3 +63,31 @@ def evaluate_model(model, title_val, X_val_channel, ner_val):
         "f1_weighted": f1_weighted,
         "f1_per_class": f1_per_class
     }
+
+
+def decode_prediction(prediction, tokens):
+    output = {}
+    current_tag = 0
+    current = ""
+    for i, token in enumerate(tokens):
+        if prediction[i] != current_tag:
+            if current_tag not in output:
+                output[current_tag] = []
+            output[current_tag].append(current.strip())
+            current_tag = prediction[i]
+            current = ""
+        current = current + " " + token
+    if current_tag not in output:
+        output[current_tag] = []
+    output[current_tag].append(current.strip())
+    if 0 in output:
+        output.pop(0)
+    if 1 in output:
+        output["Artist"] = output.pop(1)
+    else:
+        output["Artist"] = []
+    if 2 in output:
+        output["Title"] = output.pop(2)
+    else:
+        output["Title"] = []
+    return output

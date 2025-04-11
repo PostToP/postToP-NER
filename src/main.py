@@ -1,10 +1,10 @@
 from features import FeatureExtraction
-from model import build_model, evaluate_model
+from model import build_model, decode_prediction, evaluate_model
 from text_cleaner import preprocess_tokens
 from vectorizer import VectorizerKerasTokenizer, VectorizerNER
 from tokenizer import *
 from dataset import convert_ner_tags, fix_dataset_NER, split_dataset
-import re
+import dill
 import numpy as np
 import pandas as pd
 from tensorflow.keras.preprocessing.sequence import pad_sequences
@@ -66,3 +66,35 @@ model = build_model(
 
 results = evaluate_model(model, title_val, X_val_channel, ner_val)
 print(results)
+
+
+class ModelWrapper:
+    def __init__(self, model, title_tokenizer, title_vectorizer):
+        self.model = model
+        self.title_tokenizer = title_tokenizer
+        self.title_vectorizer = title_vectorizer
+        self.max_sequence_length = MAX_SEQUENCE_LENGTH
+
+    def predict(self, title, channel_name):
+        original_tokens = self.title_tokenizer.encode(title)
+        tokens = preprocess_tokens(original_tokens)
+        vector = self.title_vectorizer.encode(tokens)
+        channel_vector = FeatureExtraction.tokens_containing_channel_name(
+            original_tokens, channel_name)
+        channel_vector = pad_sequences(
+            [channel_vector], maxlen=self.max_sequence_length, padding='post')[0]
+        channel_vector = np.array(channel_vector, dtype=float)
+        vector = np.array(vector, dtype=float)
+
+        vector = vector.reshape(1, -1)
+        channel_vector = channel_vector.reshape(1, -1)
+
+        predictions = self.model.predict([vector, channel_vector])
+        predictions = np.argmax(predictions, axis=-1)
+        return decode_prediction(predictions[0], original_tokens)
+
+
+model_wrapper = ModelWrapper(model, title_tokenizer, title_vectorizer)
+
+with open('out/model.pkl', 'wb') as f:
+    dill.dump(model_wrapper, f)
