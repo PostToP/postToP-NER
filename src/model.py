@@ -6,7 +6,7 @@ from tensorflow.keras.layers import Embedding, Dense, Dropout, Bidirectional, GR
 from tensorflow.keras.models import Model
 
 
-def build_model(train_data, train_labels, val_data, val_labels, input_sequence_length, vocab_size, num_classes):
+def build_model(train_data, val_data, input_sequence_length, vocab_size, num_classes) -> Model:
     token_input = Input(shape=(input_sequence_length,),
                         name="token_input", dtype=tf.float32)
     x = Embedding(input_dim=vocab_size, output_dim=45,
@@ -27,9 +27,8 @@ def build_model(train_data, train_labels, val_data, val_labels, input_sequence_l
                   loss="sparse_categorical_crossentropy",
                   metrics=["accuracy"],
                   )
-    model.fit(train_data, train_labels, batch_size=32, verbose=1,
-              epochs=200, validation_data=(
-                  val_data, val_labels), callbacks=[anti_overfit],)
+    model.fit(train_data, verbose=1,
+              epochs=200, validation_data=val_data, callbacks=[anti_overfit],)
     return model
 
 

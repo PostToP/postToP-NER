@@ -1,3 +1,4 @@
+import tensorflow as tf
 from features import FeatureExtraction
 from model import build_model, decode_prediction, evaluate_model
 from text_cleaner import preprocess_tokens
@@ -59,9 +60,14 @@ X_train_channel = pad_sequences(
 X_val_channel = pad_sequences(
     X_val_channel, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
 
+train_dataset = tf.data.Dataset.from_tensor_slices(
+    ((title_train, X_train_channel), ner_train)).shuffle(1000).batch(32).prefetch(tf.data.AUTOTUNE)
+val_dataset = tf.data.Dataset.from_tensor_slices(
+    ((title_val, X_val_channel), ner_val)).batch(32).prefetch(tf.data.AUTOTUNE)
+
 num_classes = len(set([tag for row in train_df['NER'] for tag in row]))
 model = build_model(
-    [title_train, X_train_channel], ner_train, [title_val, X_val_channel], ner_val, MAX_SEQUENCE_LENGTH, VOCAB_SIZE, num_classes)
+    train_dataset, val_dataset, MAX_SEQUENCE_LENGTH, VOCAB_SIZE, num_classes)
 
 
 results = evaluate_model(model, title_val, X_val_channel, ner_val)
