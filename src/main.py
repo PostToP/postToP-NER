@@ -15,7 +15,7 @@ MAX_SEQUENCE_LENGTH = 45
 
 dataset = pd.read_json("dataset/data.json")
 dataset = dataset[dataset["NER"].isna() == False]
-dataset = dataset[['Channel Name', 'Title', 'NER']]
+dataset = dataset[['Channel Name', 'Title', 'NER', 'Description']]
 
 
 dataset = fix_dataset_NER(dataset)
@@ -60,17 +60,34 @@ X_train_channel = pad_sequences(
 X_val_channel = pad_sequences(
     X_val_channel, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
 
+X_train_description = FeatureExtraction.batch(FeatureExtraction.count_token_occurrences,
+                                              train_df["Original Tokens"].values, train_df["Description"].values)
+X_val_description = FeatureExtraction.batch(FeatureExtraction.count_token_occurrences,
+                                            validation_df["Original Tokens"].values, validation_df["Description"].values)
+X_train_description = pad_sequences(
+    X_train_description, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
+X_val_description = pad_sequences(
+    X_val_description, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
+
+x_feature = np.concatenate([X_train_channel.reshape(-1, MAX_SEQUENCE_LENGTH, 1),
+                            X_train_description.reshape(-1, MAX_SEQUENCE_LENGTH, 1)],
+                           axis=2)
+
+x_val_feature = np.concatenate([X_val_channel.reshape(-1, MAX_SEQUENCE_LENGTH, 1),
+                                X_val_description.reshape(-1, MAX_SEQUENCE_LENGTH, 1)],
+                               axis=2)
+
 train_dataset = tf.data.Dataset.from_tensor_slices(
-    ((title_train, X_train_channel), ner_train)).shuffle(1000).batch(32).prefetch(tf.data.AUTOTUNE)
+    ((title_train, x_feature), ner_train)).shuffle(1000).batch(32).prefetch(tf.data.AUTOTUNE)
 val_dataset = tf.data.Dataset.from_tensor_slices(
-    ((title_val, X_val_channel), ner_val)).batch(32).prefetch(tf.data.AUTOTUNE)
+    ((title_val, x_val_feature), ner_val)).batch(32).prefetch(tf.data.AUTOTUNE)
 
 num_classes = len(set([tag for row in train_df['NER'] for tag in row]))
 model = build_model(
     train_dataset, val_dataset, MAX_SEQUENCE_LENGTH, VOCAB_SIZE, num_classes)
 
 
-results = evaluate_model(model, title_val, X_val_channel, ner_val)
+results = evaluate_model(model, title_val, x_val_feature, ner_val)
 print(results)
 
 

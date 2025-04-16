@@ -13,7 +13,7 @@ def build_model(train_data, val_data, input_sequence_length, vocab_size, num_cla
                   name="token_embedding")(token_input)
 
     channel_feature_input = Input(shape=(
-        input_sequence_length, 1), name="channel_feature_input", dtype=tf.float32)
+        input_sequence_length, 2), name="channel_feature_input", dtype=tf.float32)
 
     x = Concatenate()([x, channel_feature_input])
     x = Bidirectional(GRU(64, return_sequences=True), name="bigru")(x)

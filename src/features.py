@@ -17,3 +17,14 @@ class FeatureExtraction:
     @staticmethod
     def batch(function, *args):
         return [function(*arg) for arg in zip(*args)]
+
+    @staticmethod
+    def count_token_occurrences(token, description):
+        feature = np.zeros(len(token), dtype=int)
+        token = [t.lower() for t in token]
+        description = description.lower()
+        for i, t in enumerate(token):
+            occurrences = re.findall(re.escape(t), description)
+            if occurrences:
+                feature[i] = len(occurrences)
+        return feature
