@@ -51,31 +51,33 @@ ner_train = np.array(list(ner_train))
 ner_val = np.array(list(ner_val))
 
 
+def pad_sequence(x):
+    return pad_sequences(x, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
+
+
 X_train_channel = FeatureExtraction.batch(FeatureExtraction.tokens_containing_channel_name,
                                           train_df["Original Tokens"].values, train_df["Channel Name"].values)
 X_val_channel = FeatureExtraction.batch(FeatureExtraction.tokens_containing_channel_name,
                                         validation_df["Original Tokens"].values, validation_df["Channel Name"].values)
-X_train_channel = pad_sequences(
-    X_train_channel, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
-X_val_channel = pad_sequences(
-    X_val_channel, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
+X_train_channel = pad_sequence(X_train_channel)
+X_val_channel = pad_sequence(X_val_channel)
 
 X_train_description = FeatureExtraction.batch(FeatureExtraction.count_token_occurrences,
                                               train_df["Original Tokens"].values, train_df["Description"].values)
 X_val_description = FeatureExtraction.batch(FeatureExtraction.count_token_occurrences,
                                             validation_df["Original Tokens"].values, validation_df["Description"].values)
-X_train_description = pad_sequences(
-    X_train_description, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
-X_val_description = pad_sequences(
-    X_val_description, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
+X_train_description = pad_sequence(X_train_description)
+X_val_description = pad_sequence(X_val_description)
 
-x_feature = np.concatenate([X_train_channel.reshape(-1, MAX_SEQUENCE_LENGTH, 1),
-                            X_train_description.reshape(-1, MAX_SEQUENCE_LENGTH, 1)],
-                           axis=2)
 
-x_val_feature = np.concatenate([X_val_channel.reshape(-1, MAX_SEQUENCE_LENGTH, 1),
-                                X_val_description.reshape(-1, MAX_SEQUENCE_LENGTH, 1)],
-                               axis=2)
+def concatenate_features(*features, sequence_length=MAX_SEQUENCE_LENGTH):
+    reshaped_features = [
+        feature.reshape(-1, sequence_length, 1) for feature in features]
+    return np.concatenate(reshaped_features, axis=2)
+
+
+x_feature = concatenate_features(X_train_channel, X_train_description)
+x_val_feature = concatenate_features(X_val_channel, X_val_description)
 
 train_dataset = tf.data.Dataset.from_tensor_slices(
     ((title_train, x_feature), ner_train)).shuffle(1000).batch(32).prefetch(tf.data.AUTOTUNE)
