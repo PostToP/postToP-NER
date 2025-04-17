@@ -42,32 +42,32 @@ train_df, validation_df = split_dataset(dataset, fraction=0.8, random_state=42)
 
 title_vectorizer = VectorizerKerasTokenizer(VOCAB_SIZE, MAX_SEQUENCE_LENGTH)
 title_vectorizer.train(train_df["Tokens"].values)
-title_train = title_vectorizer.encode_batch(train_df["Tokens"].values)
-title_val = title_vectorizer.encode_batch(validation_df["Tokens"].values)
-ner_train = train_df["NER"].values
+train_titles = title_vectorizer.encode_batch(train_df["Tokens"].values)
+val_titles = title_vectorizer.encode_batch(validation_df["Tokens"].values)
+train_ner = train_df["NER"].values
 
-ner_val = validation_df["NER"].values
-ner_train = np.array(list(ner_train))
-ner_val = np.array(list(ner_val))
+val_ner = validation_df["NER"].values
+train_ner = np.array(list(train_ner))
+val_ner = np.array(list(val_ner))
 
 
 def pad_sequence(x):
     return pad_sequences(x, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
 
 
-X_train_channel = FeatureExtraction.batch(FeatureExtraction.tokens_containing_channel_name,
-                                          train_df["Original Tokens"].values, train_df["Channel Name"].values)
-X_val_channel = FeatureExtraction.batch(FeatureExtraction.tokens_containing_channel_name,
-                                        validation_df["Original Tokens"].values, validation_df["Channel Name"].values)
-X_train_channel = pad_sequence(X_train_channel)
-X_val_channel = pad_sequence(X_val_channel)
+train_feature_channel = FeatureExtraction.batch(FeatureExtraction.tokens_containing_channel_name,
+                                                train_df["Original Tokens"].values, train_df["Channel Name"].values)
+val_feature_channel = FeatureExtraction.batch(FeatureExtraction.tokens_containing_channel_name,
+                                              validation_df["Original Tokens"].values, validation_df["Channel Name"].values)
+train_feature_channel = pad_sequence(train_feature_channel)
+val_feature_channel = pad_sequence(val_feature_channel)
 
-X_train_description = FeatureExtraction.batch(FeatureExtraction.count_token_occurrences,
-                                              train_df["Original Tokens"].values, train_df["Description"].values)
-X_val_description = FeatureExtraction.batch(FeatureExtraction.count_token_occurrences,
-                                            validation_df["Original Tokens"].values, validation_df["Description"].values)
-X_train_description = pad_sequence(X_train_description)
-X_val_description = pad_sequence(X_val_description)
+train_feature_description = FeatureExtraction.batch(FeatureExtraction.count_token_occurrences,
+                                                    train_df["Original Tokens"].values, train_df["Description"].values)
+val_feature_description = FeatureExtraction.batch(FeatureExtraction.count_token_occurrences,
+                                                  validation_df["Original Tokens"].values, validation_df["Description"].values)
+train_feature_description = pad_sequence(train_feature_description)
+val_feature_description = pad_sequence(val_feature_description)
 
 
 def concatenate_features(*features, sequence_length=MAX_SEQUENCE_LENGTH):
@@ -76,20 +76,22 @@ def concatenate_features(*features, sequence_length=MAX_SEQUENCE_LENGTH):
     return np.concatenate(reshaped_features, axis=2)
 
 
-x_feature = concatenate_features(X_train_channel, X_train_description)
-x_val_feature = concatenate_features(X_val_channel, X_val_description)
+train_features = concatenate_features(
+    train_feature_channel, train_feature_description)
+val_features = concatenate_features(
+    val_feature_channel, val_feature_description)
 
 train_dataset = tf.data.Dataset.from_tensor_slices(
-    ((title_train, x_feature), ner_train)).shuffle(1000).batch(32).prefetch(tf.data.AUTOTUNE)
+    ((train_titles, train_features), train_ner)).shuffle(1000).batch(32).prefetch(tf.data.AUTOTUNE)
 val_dataset = tf.data.Dataset.from_tensor_slices(
-    ((title_val, x_val_feature), ner_val)).batch(32).prefetch(tf.data.AUTOTUNE)
+    ((val_titles, val_features), val_ner)).batch(32).prefetch(tf.data.AUTOTUNE)
 
 num_classes = len(set([tag for row in train_df['NER'] for tag in row]))
 model = build_model(
     train_dataset, val_dataset, MAX_SEQUENCE_LENGTH, VOCAB_SIZE, num_classes)
 
 
-results = evaluate_model(model, title_val, x_val_feature, ner_val)
+results = evaluate_model(model, val_titles, val_features, val_ner)
 print(results)
 
 
