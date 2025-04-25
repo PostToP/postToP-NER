@@ -9,7 +9,6 @@ from dataset import convert_ner_tags, fix_dataset_NER, split_dataset
 import dill
 import numpy as np
 import pandas as pd
-from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 VOCAB_SIZE = 50
 MAX_SEQUENCE_LENGTH = 45
@@ -90,26 +89,35 @@ class ModelWrapper:
         self.title_vectorizer = title_vectorizer
         self.max_sequence_length = MAX_SEQUENCE_LENGTH
 
-    def predict(self, title, channel_name):
+    def predict(self, title, channel_name, description):
         original_tokens = self.title_tokenizer.encode(title)
         tokens = preprocess_tokens(original_tokens)
         vector = self.title_vectorizer.encode(tokens)
-        channel_vector = FeatureExtraction.tokens_containing_channel_name(
-            original_tokens, channel_name)
-        channel_vector = pad_sequences(
-            [channel_vector], maxlen=self.max_sequence_length, padding='post')[0]
-        channel_vector = np.array(channel_vector, dtype=float)
+        channel_vector = TensorMonad([[original_tokens], [channel_name]]).map(
+            FeatureExtraction.tokens_containing_channel_name).pad(
+            self.max_sequence_length).to_tensor()
+
+        description_vector = TensorMonad(
+            [[original_tokens], [description]]).map(
+            FeatureExtraction.count_token_occurrences).pad(
+            self.max_sequence_length).to_tensor()
+
+        features = np.concatenate([channel_vector, description_vector], axis=2)
+
         vector = np.array(vector, dtype=float)
-
         vector = vector.reshape(1, -1)
-        channel_vector = channel_vector.reshape(1, -1)
 
-        predictions = self.model.predict([vector, channel_vector])
+        predictions = self.model.predict([vector, features])
         predictions = np.argmax(predictions, axis=-1)
         return decode_prediction(predictions[0], original_tokens)
 
 
 model_wrapper = ModelWrapper(model, title_tokenizer, title_vectorizer)
+print(model_wrapper.predict(
+    "MISSH feat. BURAI – Budapest (Official Music Video) | #misshmusic",
+    "#MISSHMUSIC",
+    "#MISSHMUSIC\n\nhttps://open.spotify.com/artist/6PD6eSZM8ulCg5PRU6mEII\nhttps://music.apple.com/lt/artist/misshmusic/1282462090\nhttps://www.deezer.com/us/artist/13167869\n\nhttps://www.tiktok.com/@misshmusic_official\nhttps://www.facebook.com/MR.MISSH90\nhttps://www.instagram.com/missh90/\n\nKülönköszönet : Ecke22 étterem /www.ecke22etterem.hu                    \n\nA  MisshMusic  2013 óta működő független magyar zenei produkciós iroda. Fő tevékenységünk saját dalok és videoklipek készítése továbbá egyedi tervezésű saját márkás ruházati termékek forgalmazása. Eddigi zenei együttműködő partnereink: G.w.M. , Burai Krisztián, Young G26, IGNI, Hegyi Roland (HR)."
+))
 
 with open('out/model.pkl', 'wb') as f:
     dill.dump(model_wrapper, f)

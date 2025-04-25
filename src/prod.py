@@ -5,6 +5,7 @@ from features import FeatureExtraction
 import numpy as np
 from model import decode_prediction
 from text_cleaner import preprocess_tokens
+from tensormonad import TensorMonad
 
 with open('out/model.pkl', 'rb') as f:
     model = dill.load(f)
@@ -16,7 +17,8 @@ with open('out/model.pkl', 'rb') as f:
         data = request.get_json(force=True)
         title = data['title']
         channel_name = data['channel_name']
-        grouped_results = model.predict(title, channel_name)
+        description = data['description']
+        grouped_results = model.predict(title, channel_name, description)
         return jsonify({
             'prediction': grouped_results,
             'status': 'success'
