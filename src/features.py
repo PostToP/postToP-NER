@@ -12,11 +12,12 @@ class FeatureExtraction:
             if t in channel_name:
                 if re.search(r'([一-龠ぁ-ゔァ-ヴーａ-ｚＡ-Ｚ０-９々〆〤]+|[a-zA-Z0-9]+)[.!]*', t):
                     feature[i] = 1
-        return feature
+        return feature[:, np.newaxis]
 
     @staticmethod
     def batch(function, *args):
-        return [function(*arg) for arg in zip(*args)]
+        features = [function(*arg) for arg in zip(*args)]
+        return np.stack(features, axis=0)
 
     @staticmethod
     def count_token_occurrences(token, description):
@@ -27,4 +28,4 @@ class FeatureExtraction:
             occurrences = re.findall(re.escape(t), description)
             if occurrences:
                 feature[i] = len(occurrences)
-        return feature
+        return feature[:, np.newaxis]

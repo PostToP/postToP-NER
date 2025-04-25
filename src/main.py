@@ -1,6 +1,7 @@
 import tensorflow as tf
 from features import FeatureExtraction
 from model import build_model, decode_prediction, evaluate_model
+from tensormonad import TensorMonad
 from text_cleaner import preprocess_tokens
 from vectorizer import VectorizerKerasTokenizer, VectorizerNER
 from tokenizer import *
@@ -30,7 +31,6 @@ dataset["Original Tokens"] = dataset["Title"].apply(
     lambda x: title_tokenizer.encode(x))
 dataset["Tokens"] = dataset["Original Tokens"].apply(
     lambda x: preprocess_tokens(x))
-print(dataset.iloc[0]["Title"])
 
 ner_vectorizer = VectorizerNER(MAX_SEQUENCE_LENGTH)
 ner_vectorizer.train(dataset["NER"].values)
@@ -50,36 +50,24 @@ val_ner = validation_df["NER"].values
 train_ner = np.array(list(train_ner))
 val_ner = np.array(list(val_ner))
 
+train_feature_channel = TensorMonad((train_df["Original Tokens"].values, train_df["Channel Name"].values)).map(
+    FeatureExtraction.tokens_containing_channel_name).pad(MAX_SEQUENCE_LENGTH).to_tensor()
+val_feature_channel = TensorMonad((validation_df["Original Tokens"].values, validation_df["Channel Name"].values)).map(
+    FeatureExtraction.tokens_containing_channel_name).pad(MAX_SEQUENCE_LENGTH).to_tensor()
 
-def pad_sequence(x):
-    return pad_sequences(x, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
-
-
-train_feature_channel = FeatureExtraction.batch(FeatureExtraction.tokens_containing_channel_name,
-                                                train_df["Original Tokens"].values, train_df["Channel Name"].values)
-val_feature_channel = FeatureExtraction.batch(FeatureExtraction.tokens_containing_channel_name,
-                                              validation_df["Original Tokens"].values, validation_df["Channel Name"].values)
-train_feature_channel = pad_sequence(train_feature_channel)
-val_feature_channel = pad_sequence(val_feature_channel)
-
-train_feature_description = FeatureExtraction.batch(FeatureExtraction.count_token_occurrences,
-                                                    train_df["Original Tokens"].values, train_df["Description"].values)
-val_feature_description = FeatureExtraction.batch(FeatureExtraction.count_token_occurrences,
-                                                  validation_df["Original Tokens"].values, validation_df["Description"].values)
-train_feature_description = pad_sequence(train_feature_description)
-val_feature_description = pad_sequence(val_feature_description)
+train_feature_description = TensorMonad(
+    (train_df["Original Tokens"].values, train_df["Description"].values)).map(
+    FeatureExtraction.count_token_occurrences).pad(MAX_SEQUENCE_LENGTH).to_tensor()
+val_feature_description = TensorMonad(
+    (validation_df["Original Tokens"].values, validation_df["Description"].values)).map(
+    FeatureExtraction.count_token_occurrences).pad(MAX_SEQUENCE_LENGTH).to_tensor()
 
 
-def concatenate_features(*features, sequence_length=MAX_SEQUENCE_LENGTH):
-    reshaped_features = [
-        feature.reshape(-1, sequence_length, 1) for feature in features]
-    return np.concatenate(reshaped_features, axis=2)
+train_features = np.concatenate(
+    [train_feature_channel, train_feature_description], axis=2)
+val_features = np.concatenate(
+    [val_feature_channel, val_feature_description], axis=2)
 
-
-train_features = concatenate_features(
-    train_feature_channel, train_feature_description)
-val_features = concatenate_features(
-    val_feature_channel, val_feature_description)
 
 train_dataset = tf.data.Dataset.from_tensor_slices(
     ((train_titles, train_features), train_ner)).shuffle(1000).batch(32).prefetch(tf.data.AUTOTUNE)
@@ -88,7 +76,7 @@ val_dataset = tf.data.Dataset.from_tensor_slices(
 
 num_classes = len(set([tag for row in train_df['NER'] for tag in row]))
 model = build_model(
-    train_dataset, val_dataset, MAX_SEQUENCE_LENGTH, VOCAB_SIZE, num_classes)
+    train_dataset, val_dataset, VOCAB_SIZE, num_classes)
 
 
 results = evaluate_model(model, val_titles, val_features, val_ner)

@@ -6,14 +6,18 @@ from tensorflow.keras.layers import Embedding, Dense, Dropout, Bidirectional, GR
 from tensorflow.keras.models import Model
 
 
-def build_model(train_data, val_data, input_sequence_length, vocab_size, num_classes) -> Model:
-    token_input = Input(shape=(input_sequence_length,),
+def build_model(train_data, val_data, vocab_size, num_classes) -> Model:
+    token_input_shape = train_data.element_spec[0][0].shape
+    token_input_shape = (token_input_shape[1],)
+    channel_input_shape = train_data.element_spec[0][1].shape
+    channel_input_shape = (channel_input_shape[1], channel_input_shape[2])
+    token_input = Input(shape=token_input_shape,
                         name="token_input", dtype=tf.float32)
     x = Embedding(input_dim=vocab_size, output_dim=45,
                   name="token_embedding")(token_input)
 
-    channel_feature_input = Input(shape=(
-        input_sequence_length, 2), name="channel_feature_input", dtype=tf.float32)
+    channel_feature_input = Input(
+        shape=channel_input_shape, name="channel_feature_input", dtype=tf.float32)
 
     x = Concatenate()([x, channel_feature_input])
     x = Bidirectional(GRU(64, return_sequences=True), name="bigru")(x)
