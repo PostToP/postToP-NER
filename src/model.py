@@ -4,6 +4,7 @@ import numpy as np
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Embedding, Dense, Dropout, Bidirectional, GRU, Input, Concatenate, TimeDistributed
 from tensorflow.keras.models import Model
+from keras import metrics
 
 
 def build_model(train_data, val_data, vocab_size, num_classes) -> Model:
@@ -16,23 +17,25 @@ def build_model(train_data, val_data, vocab_size, num_classes) -> Model:
     x = Embedding(input_dim=vocab_size, output_dim=45,
                   name="token_embedding")(token_input)
 
-    channel_feature_input = Input(
+    per_token_feature_input = Input(
         shape=channel_input_shape, name="channel_feature_input", dtype=tf.float32)
 
-    x = Concatenate()([x, channel_feature_input])
+    x = Concatenate()([x, per_token_feature_input])
     x = Bidirectional(GRU(64, return_sequences=True), name="bigru")(x)
 
     x = Dropout(0.2)(x)
     x = TimeDistributed(Dense(num_classes, activation='softmax'))(x)
-    model = Model(inputs=[token_input, channel_feature_input], outputs=x)
+    model = Model(inputs=[token_input, per_token_feature_input], outputs=x)
     anti_overfit = EarlyStopping(
-        monitor='val_loss', patience=10, restore_best_weights=True, min_delta=0.005, mode="min")
-    model.compile(optimizer="adam",
+        monitor='val_loss', patience=20, restore_best_weights=True, min_delta=0.001, mode="min")
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
+
+    model.compile(optimizer=optimizer,
                   loss="sparse_categorical_crossentropy",
-                  metrics=["accuracy"],
-                  )
+                  metrics=["accuracy"]),
+    model.summary()
     model.fit(train_data, verbose=1,
-              epochs=200, validation_data=val_data, callbacks=[anti_overfit],)
+              epochs=500, validation_data=val_data, callbacks=[anti_overfit],)
     return model
 
 

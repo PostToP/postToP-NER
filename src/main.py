@@ -69,9 +69,9 @@ val_features = np.concatenate(
 
 
 train_dataset = tf.data.Dataset.from_tensor_slices(
-    ((train_titles, train_features), train_ner)).shuffle(1000).batch(32).prefetch(tf.data.AUTOTUNE)
+    ((train_titles, train_features), train_ner)).shuffle(1000).batch(1024).prefetch(tf.data.AUTOTUNE)
 val_dataset = tf.data.Dataset.from_tensor_slices(
-    ((val_titles, val_features), val_ner)).batch(32).prefetch(tf.data.AUTOTUNE)
+    ((val_titles, val_features), val_ner)).batch(1024).prefetch(tf.data.AUTOTUNE)
 
 num_classes = len(set([tag for row in train_df['NER'] for tag in row]))
 model = build_model(
