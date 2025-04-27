@@ -73,10 +73,7 @@ train_dataset = tf.data.Dataset.from_tensor_slices(
 val_dataset = tf.data.Dataset.from_tensor_slices(
     ((val_titles, val_features), val_ner)).batch(1024).prefetch(tf.data.AUTOTUNE)
 
-num_classes = len(set([tag for row in train_df['NER'] for tag in row]))
-model = build_model(
-    train_dataset, val_dataset, VOCAB_SIZE, num_classes)
-
+model = build_model(train_dataset, val_dataset)
 
 results = evaluate_model(model, val_titles, val_features, val_ner)
 print(results)

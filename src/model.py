@@ -7,11 +7,26 @@ from tensorflow.keras.models import Model
 from keras import metrics
 
 
-def build_model(train_data, val_data, vocab_size, num_classes) -> Model:
+def number_of_classes(values):
+    num_classes = 0
+    for batch in values:
+        max_tag = tf.reduce_max(batch)
+        if max_tag > num_classes:
+            num_classes = max_tag
+    return int(num_classes.numpy()) + 1
+
+
+def build_model(train_data, val_data) -> Model:
     token_input_shape = train_data.element_spec[0][0].shape
     token_input_shape = (token_input_shape[1],)
     channel_input_shape = train_data.element_spec[0][1].shape
     channel_input_shape = (channel_input_shape[1], channel_input_shape[2])
+
+    vocab_size = number_of_classes(train_data.map(lambda x, y: x[0]))
+    num_classes = number_of_classes(train_data.map(lambda x, y: y))
+    print(f"Vocabulary size: {vocab_size}")
+    print(f"Number of classes: {num_classes}")
+
     token_input = Input(shape=token_input_shape,
                         name="token_input", dtype=tf.float32)
     x = Embedding(input_dim=vocab_size, output_dim=45,
