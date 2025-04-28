@@ -36,6 +36,16 @@ ner_vectorizer.train(dataset["NER"].values)
 dataset["NER"] = dataset["NER"].apply(
     lambda x: ner_vectorizer.encode(x))
 
+feature_channel = TensorMonad(
+    (dataset["Original Tokens"].values, dataset["Channel Name"].values)).map(
+    FeatureExtraction.tokens_containing_channel_name).pad(MAX_SEQUENCE_LENGTH).to_tensor()
+feature_description = TensorMonad(
+    (dataset["Original Tokens"].values, dataset["Description"].values)).map(
+    FeatureExtraction.count_token_occurrences).pad(MAX_SEQUENCE_LENGTH).to_tensor()
+features = np.concatenate(
+    [feature_channel, feature_description], axis=2)
+dataset["Features"] = features.tolist()
+
 train_df, validation_df = split_dataset(dataset, fraction=0.8, random_state=42)
 
 
@@ -49,24 +59,8 @@ val_ner = validation_df["NER"].values
 train_ner = np.array(list(train_ner))
 val_ner = np.array(list(val_ner))
 
-train_feature_channel = TensorMonad((train_df["Original Tokens"].values, train_df["Channel Name"].values)).map(
-    FeatureExtraction.tokens_containing_channel_name).pad(MAX_SEQUENCE_LENGTH).to_tensor()
-val_feature_channel = TensorMonad((validation_df["Original Tokens"].values, validation_df["Channel Name"].values)).map(
-    FeatureExtraction.tokens_containing_channel_name).pad(MAX_SEQUENCE_LENGTH).to_tensor()
-
-train_feature_description = TensorMonad(
-    (train_df["Original Tokens"].values, train_df["Description"].values)).map(
-    FeatureExtraction.count_token_occurrences).pad(MAX_SEQUENCE_LENGTH).to_tensor()
-val_feature_description = TensorMonad(
-    (validation_df["Original Tokens"].values, validation_df["Description"].values)).map(
-    FeatureExtraction.count_token_occurrences).pad(MAX_SEQUENCE_LENGTH).to_tensor()
-
-
-train_features = np.concatenate(
-    [train_feature_channel, train_feature_description], axis=2)
-val_features = np.concatenate(
-    [val_feature_channel, val_feature_description], axis=2)
-
+train_features = np.array(list(train_df["Features"].values))
+val_features = np.array(list(validation_df["Features"].values))
 
 train_dataset = tf.data.Dataset.from_tensor_slices(
     ((train_titles, train_features), train_ner)).shuffle(1000).batch(1024).prefetch(tf.data.AUTOTUNE)
