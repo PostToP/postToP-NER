@@ -7,6 +7,27 @@ from tensorflow.keras.models import Model
 from keras import metrics
 
 
+def f1_micro(y_true, y_pred):
+    y_true = tf.cast(y_true, tf.int32)
+    y_pred = tf.argmax(y_pred, axis=-1)
+    y_pred = tf.cast(y_pred, tf.int32)
+
+    true_positive_count = tf.reduce_sum(tf.cast(tf.logical_and(
+        tf.equal(y_true, y_pred), tf.not_equal(y_true, 0)), tf.float32))
+    false_positive_count = tf.reduce_sum(tf.cast(tf.logical_and(tf.not_equal(
+        y_true, y_pred), tf.not_equal(y_pred, 0)), tf.float32))
+    false_negative_count = tf.reduce_sum(tf.cast(tf.logical_and(tf.not_equal(
+        y_true, y_pred), tf.not_equal(y_true, 0)), tf.float32))
+
+    precision = true_positive_count / \
+        (true_positive_count + false_positive_count + 1e-10)
+    recall = true_positive_count / \
+        (true_positive_count + false_negative_count + 1e-10)
+
+    f1 = 2 * (precision * recall) / (precision + recall + 1e-10)
+    return f1
+
+
 def number_of_classes(values):
     num_classes = 0
     for batch in values:
@@ -42,12 +63,12 @@ def build_model(train_data, val_data) -> Model:
     x = TimeDistributed(Dense(num_classes, activation='softmax'))(x)
     model = Model(inputs=[token_input, per_token_feature_input], outputs=x)
     anti_overfit = EarlyStopping(
-        monitor='val_loss', patience=20, restore_best_weights=True, min_delta=0.001, mode="min")
+        monitor='val_f1_micro', patience=20, restore_best_weights=True, min_delta=0.005, mode="max")
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
 
     model.compile(optimizer=optimizer,
                   loss="sparse_categorical_crossentropy",
-                  metrics=["accuracy"]),
+                  metrics=["accuracy", f1_micro]),
     model.summary()
     model.fit(train_data, verbose=1,
               epochs=500, validation_data=val_data, callbacks=[anti_overfit],)
@@ -55,7 +76,7 @@ def build_model(train_data, val_data) -> Model:
 
 
 def evaluate_model(model, title_val, X_val_channel, ner_val):
-    loss, accuracy = model.evaluate(
+    loss, _, accuracy = model.evaluate(
         [title_val, X_val_channel], ner_val, verbose=0)
 
     y_pred = model.predict([title_val, X_val_channel], verbose=0)
@@ -65,7 +86,7 @@ def evaluate_model(model, title_val, X_val_channel, ner_val):
     y_pred_flat = []
 
     for i in range(len(ner_val)):
-        seq_len = np.sum(title_val[i] != 0)  # Non-zero tokens
+        seq_len = np.sum(title_val[i] != 0)
         if seq_len > 0:
             y_true_flat.extend(ner_val[i][:seq_len])
             y_pred_flat.extend(y_pred_classes[i][:seq_len])
