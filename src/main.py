@@ -36,14 +36,19 @@ ner_vectorizer.train(dataset["NER"].values)
 dataset["NER"] = dataset["NER"].apply(
     lambda x: ner_vectorizer.encode(x))
 
+features = []
+
 feature_channel = TensorMonad(
     (dataset["Original Tokens"].values, dataset["Channel Name"].values)).map(
     FeatureExtraction.tokens_containing_channel_name).pad(MAX_SEQUENCE_LENGTH).to_tensor()
+features.append(feature_channel)
+
 feature_description = TensorMonad(
     (dataset["Original Tokens"].values, dataset["Description"].values)).map(
     FeatureExtraction.count_token_occurrences).pad(MAX_SEQUENCE_LENGTH).to_tensor()
-features = np.concatenate(
-    [feature_channel, feature_description], axis=2)
+features.append(feature_description)
+
+features = np.concatenate(features, axis=2)
 dataset["Features"] = features.tolist()
 
 train_df, validation_df = split_dataset(dataset, fraction=0.8, random_state=42)
