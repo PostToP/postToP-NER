@@ -53,6 +53,11 @@ feature_token_length = TensorMonad(
     FeatureExtraction.length_of_tokens).pad(MAX_SEQUENCE_LENGTH).to_tensor()
 features.append(feature_token_length)
 
+feature_is_token_verbal = TensorMonad(
+    [dataset["Original Tokens"].values]).map(
+    FeatureExtraction.is_token_verbal).pad(MAX_SEQUENCE_LENGTH).to_tensor()
+features.append(feature_is_token_verbal)
+
 features = np.concatenate(features, axis=2)
 dataset["Features"] = features.tolist()
 
@@ -108,8 +113,13 @@ class ModelWrapper:
             FeatureExtraction.length_of_tokens).pad(
             self.max_sequence_length).to_tensor()
 
+        is_token_verbal_vector = TensorMonad(
+            [[original_tokens]]).map(
+            FeatureExtraction.is_token_verbal).pad(
+            self.max_sequence_length).to_tensor()
+
         features = np.concatenate(
-            [channel_vector, description_vector, length_vector], axis=2)
+            [channel_vector, description_vector, length_vector, is_token_verbal_vector], axis=2)
 
         vector = np.array(vector, dtype=float)
         vector = vector.reshape(1, -1)
