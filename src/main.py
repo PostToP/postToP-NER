@@ -48,6 +48,11 @@ feature_description = TensorMonad(
     FeatureExtraction.count_token_occurrences).pad(MAX_SEQUENCE_LENGTH).to_tensor()
 features.append(feature_description)
 
+feature_token_length = TensorMonad(
+    [dataset["Original Tokens"].values]).map(
+    FeatureExtraction.length_of_tokens).pad(MAX_SEQUENCE_LENGTH).to_tensor()
+features.append(feature_token_length)
+
 features = np.concatenate(features, axis=2)
 dataset["Features"] = features.tolist()
 
@@ -98,7 +103,13 @@ class ModelWrapper:
             FeatureExtraction.count_token_occurrences).pad(
             self.max_sequence_length).to_tensor()
 
-        features = np.concatenate([channel_vector, description_vector], axis=2)
+        length_vector = TensorMonad(
+            [[original_tokens]]).map(
+            FeatureExtraction.length_of_tokens).pad(
+            self.max_sequence_length).to_tensor()
+
+        features = np.concatenate(
+            [channel_vector, description_vector, length_vector], axis=2)
 
         vector = np.array(vector, dtype=float)
         vector = vector.reshape(1, -1)

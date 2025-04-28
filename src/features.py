@@ -29,3 +29,7 @@ class FeatureExtraction:
             if occurrences:
                 feature[i] = len(occurrences)
         return feature[:, np.newaxis]
+
+    @staticmethod
+    def length_of_tokens(token):
+        return np.array([len(t) for t in token], dtype=int)[:, np.newaxis]
