@@ -4,9 +4,10 @@ import numpy as np
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Embedding, Dense, Dropout, Bidirectional, GRU, Input, Concatenate, TimeDistributed
 from tensorflow.keras.models import Model
-from keras import metrics
+import keras
 
 
+@keras.saving.register_keras_serializable()
 def f1_micro(y_true, y_pred):
     y_true = tf.cast(y_true, tf.int32)
     y_pred = tf.argmax(y_pred, axis=-1)
