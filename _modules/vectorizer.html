@@ -155,22 +155,24 @@
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vocab_size</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">max_sequence_length</span><span class="o">=</span><span class="mi">64</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">max_sequence_length</span> <span class="o">=</span> <span class="n">max_sequence_length</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">vectorizer</span> <span class="o">=</span> <span class="n">KerasTokenizer</span><span class="p">(</span>
-            <span class="n">num_words</span><span class="o">=</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">oov_token</span><span class="o">=</span><span class="s2">&quot;&lt;OOV&gt;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vectorizer</span> <span class="o">=</span> <span class="n">KerasTokenizer</span><span class="p">(</span><span class="n">num_words</span><span class="o">=</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">oov_token</span><span class="o">=</span><span class="s2">&quot;&lt;OOV&gt;&quot;</span><span class="p">)</span>
 
 <div class="viewcode-block" id="VectorizerKerasTokenizer.train"><a class="viewcode-back" href="../vectorizer.html#vectorizer.VectorizerKerasTokenizer.train">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">texts</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">vectorizer</span><span class="o">.</span><span class="n">fit_on_texts</span><span class="p">(</span><span class="n">texts</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vectorizer</span><span class="o">.</span><span class="n">fit_on_texts</span><span class="p">(</span><span class="n">texts</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vectorizer</span><span class="o">.</span><span class="n">word_index</span><span class="p">[</span><span class="s2">&quot;&lt;oov&gt;&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span></div>
 
 <div class="viewcode-block" id="VectorizerKerasTokenizer.encode"><a class="viewcode-back" href="../vectorizer.html#vectorizer.VectorizerKerasTokenizer.encode">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
         <span class="n">sequence</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vectorizer</span><span class="o">.</span><span class="n">texts_to_sequences</span><span class="p">([</span><span class="n">text</span><span class="p">])</span>
         <span class="n">padded_sequences</span> <span class="o">=</span> <span class="n">pad_sequences</span><span class="p">(</span>
-            <span class="n">sequence</span><span class="p">,</span> <span class="n">maxlen</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_sequence_length</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="s1">&#39;post&#39;</span><span class="p">)</span>
+            <span class="n">sequence</span><span class="p">,</span> <span class="n">maxlen</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_sequence_length</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="s2">&quot;post&quot;</span>
+        <span class="p">)</span>
         <span class="k">return</span> <span class="n">padded_sequences</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
 
 <div class="viewcode-block" id="VectorizerKerasTokenizer.encode_batch"><a class="viewcode-back" href="../vectorizer.html#vectorizer.VectorizerKerasTokenizer.encode_batch">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">encode_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">texts</span><span class="p">):</span>
         <span class="n">sequences</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vectorizer</span><span class="o">.</span><span class="n">texts_to_sequences</span><span class="p">(</span><span class="n">texts</span><span class="p">)</span>
         <span class="n">padded_sequences</span> <span class="o">=</span> <span class="n">pad_sequences</span><span class="p">(</span>
-            <span class="n">sequences</span><span class="p">,</span> <span class="n">maxlen</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_sequence_length</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="s1">&#39;post&#39;</span><span class="p">)</span>
+            <span class="n">sequences</span><span class="p">,</span> <span class="n">maxlen</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_sequence_length</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="s2">&quot;post&quot;</span>
+        <span class="p">)</span>
         <span class="k">return</span> <span class="n">padded_sequences</span></div></div>
 
 
@@ -184,27 +186,22 @@
         <span class="k">pass</span></div>
 
 <div class="viewcode-block" id="VectorizerNER.encode"><a class="viewcode-back" href="../vectorizer.html#vectorizer.VectorizerNER.encode">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tags</span><span class="p">):</span>
-        <span class="n">tag_map</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;O&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-            <span class="s2">&quot;I-Artist&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-            <span class="s2">&quot;I-Title&quot;</span><span class="p">:</span> <span class="mi">2</span>
-        <span class="p">}</span>
+        <span class="n">tag_map</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;O&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;I-Artist&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;I-Title&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">}</span>
         <span class="n">tag_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">tag_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">tag</span><span class="p">)</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">])</span>
 
         <span class="n">padded_tags</span> <span class="o">=</span> <span class="n">pad_sequences</span><span class="p">(</span>
-            <span class="p">[</span><span class="n">tag_vec</span><span class="p">],</span> <span class="n">maxlen</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_sequence_length</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="s1">&#39;post&#39;</span><span class="p">)</span>
+            <span class="p">[</span><span class="n">tag_vec</span><span class="p">],</span> <span class="n">maxlen</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_sequence_length</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="s2">&quot;post&quot;</span>
+        <span class="p">)</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">padded_tags</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span></div>
 
 <div class="viewcode-block" id="VectorizerNER.encode_batch"><a class="viewcode-back" href="../vectorizer.html#vectorizer.VectorizerNER.encode_batch">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">encode_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tags</span><span class="p">):</span>
-        <span class="n">tag_map</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;O&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-            <span class="s2">&quot;I-Artist&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-            <span class="s2">&quot;I-Title&quot;</span><span class="p">:</span> <span class="mi">2</span>
-        <span class="p">}</span>
-        <span class="n">tag_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">tag_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">tag</span><span class="p">)</span>
-                           <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tag_list</span><span class="p">]</span> <span class="k">for</span> <span class="n">tag_list</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">])</span>
+        <span class="n">tag_map</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;O&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;I-Artist&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;I-Title&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">}</span>
+        <span class="n">tag_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[[</span><span class="n">tag_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">tag</span><span class="p">)</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tag_list</span><span class="p">]</span> <span class="k">for</span> <span class="n">tag_list</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">]</span>
+        <span class="p">)</span>
         <span class="n">padded_tags</span> <span class="o">=</span> <span class="n">pad_sequences</span><span class="p">(</span>
-            <span class="n">tag_vec</span><span class="p">,</span> <span class="n">maxlen</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_sequence_length</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="s1">&#39;post&#39;</span><span class="p">)</span>
+            <span class="n">tag_vec</span><span class="p">,</span> <span class="n">maxlen</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_sequence_length</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="s2">&quot;post&quot;</span>
+        <span class="p">)</span>
         <span class="k">return</span> <span class="n">padded_tags</span></div></div>
 </pre></div>
 
