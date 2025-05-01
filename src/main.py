@@ -17,7 +17,7 @@ MAX_SEQUENCE_LENGTH = 45
 def main():
     dataset = pd.read_json("dataset/data.json")
     dataset = dataset[dataset["NER"].isna() == False]
-    dataset = dataset[['Channel Name', 'Title', 'NER', 'Description']]
+    dataset = dataset[["Channel Name", "Title", "NER", "Description"]]
 
     dataset = fix_dataset_NER(dataset)
 
@@ -26,45 +26,54 @@ def main():
 
     title_tokenizer = TokenizerCustom()
     dataset["Original Tokens"] = dataset["Title"].apply(
-        lambda x: title_tokenizer.encode(x))
-    dataset["Tokens"] = dataset["Original Tokens"].apply(
-        lambda x: preprocess_tokens(x))
+        lambda x: title_tokenizer.encode(x)
+    )
+    dataset["Tokens"] = dataset["Original Tokens"].apply(lambda x: preprocess_tokens(x))
 
     ner_vectorizer = VectorizerNER(MAX_SEQUENCE_LENGTH)
     ner_vectorizer.train(dataset["NER"].values)
-    dataset["NER"] = dataset["NER"].apply(
-        lambda x: ner_vectorizer.encode(x))
+    dataset["NER"] = dataset["NER"].apply(lambda x: ner_vectorizer.encode(x))
 
     features = []
 
-    feature_channel = TensorMonad(
-        (dataset["Original Tokens"].values, dataset["Channel Name"].values)).map(
-        FeatureExtraction.tokens_containing_channel_name).pad(MAX_SEQUENCE_LENGTH).to_tensor()
+    feature_channel = (
+        TensorMonad((dataset["Original Tokens"].values, dataset["Channel Name"].values))
+        .map(FeatureExtraction.tokens_containing_channel_name)
+        .pad(MAX_SEQUENCE_LENGTH)
+        .to_tensor()
+    )
     features.append(feature_channel)
 
-    feature_description = TensorMonad(
-        (dataset["Original Tokens"].values, dataset["Description"].values)).map(
-        FeatureExtraction.count_token_occurrences).pad(MAX_SEQUENCE_LENGTH).to_tensor()
+    feature_description = (
+        TensorMonad((dataset["Original Tokens"].values, dataset["Description"].values))
+        .map(FeatureExtraction.count_token_occurrences)
+        .pad(MAX_SEQUENCE_LENGTH)
+        .to_tensor()
+    )
     features.append(feature_description)
 
-    feature_token_length = TensorMonad(
-        [dataset["Original Tokens"].values]).map(
-        FeatureExtraction.length_of_tokens).pad(MAX_SEQUENCE_LENGTH).to_tensor()
+    feature_token_length = (
+        TensorMonad([dataset["Original Tokens"].values])
+        .map(FeatureExtraction.length_of_tokens)
+        .pad(MAX_SEQUENCE_LENGTH)
+        .to_tensor()
+    )
     features.append(feature_token_length)
 
-    feature_is_token_verbal = TensorMonad(
-        [dataset["Original Tokens"].values]).map(
-        FeatureExtraction.is_token_verbal).pad(MAX_SEQUENCE_LENGTH).to_tensor()
+    feature_is_token_verbal = (
+        TensorMonad([dataset["Original Tokens"].values])
+        .map(FeatureExtraction.is_token_verbal)
+        .pad(MAX_SEQUENCE_LENGTH)
+        .to_tensor()
+    )
     features.append(feature_is_token_verbal)
 
     features = np.concatenate(features, axis=2)
     dataset["Features"] = features.tolist()
 
-    train_df, validation_df = split_dataset(
-        dataset, fraction=0.8, random_state=42)
+    train_df, validation_df = split_dataset(dataset, fraction=0.8, random_state=42)
 
-    title_vectorizer = VectorizerKerasTokenizer(
-        VOCAB_SIZE, MAX_SEQUENCE_LENGTH)
+    title_vectorizer = VectorizerKerasTokenizer(VOCAB_SIZE, MAX_SEQUENCE_LENGTH)
     title_vectorizer.train(train_df["Tokens"].values)
     train_titles = title_vectorizer.encode_batch(train_df["Tokens"].values)
     val_titles = title_vectorizer.encode_batch(validation_df["Tokens"].values)
@@ -77,10 +86,17 @@ def main():
     train_features = np.array(list(train_df["Features"].values))
     val_features = np.array(list(validation_df["Features"].values))
 
-    train_dataset = tf.data.Dataset.from_tensor_slices(
-        ((train_titles, train_features), train_ner)).shuffle(1000).batch(1024).prefetch(tf.data.AUTOTUNE)
-    val_dataset = tf.data.Dataset.from_tensor_slices(
-        ((val_titles, val_features), val_ner)).batch(1024).prefetch(tf.data.AUTOTUNE)
+    train_dataset = (
+        tf.data.Dataset.from_tensor_slices(((train_titles, train_features), train_ner))
+        .shuffle(1000)
+        .batch(1024)
+        .prefetch(tf.data.AUTOTUNE)
+    )
+    val_dataset = (
+        tf.data.Dataset.from_tensor_slices(((val_titles, val_features), val_ner))
+        .batch(1024)
+        .prefetch(tf.data.AUTOTUNE)
+    )
 
     model = build_model(train_dataset, val_dataset)
 
@@ -98,27 +114,43 @@ def main():
             original_tokens = self.title_tokenizer.encode(title)
             tokens = preprocess_tokens(original_tokens)
             vector = self.title_vectorizer.encode(tokens)
-            channel_vector = TensorMonad([[original_tokens], [channel_name]]).map(
-                FeatureExtraction.tokens_containing_channel_name).pad(
-                self.max_sequence_length).to_tensor()
+            channel_vector = (
+                TensorMonad([[original_tokens], [channel_name]])
+                .map(FeatureExtraction.tokens_containing_channel_name)
+                .pad(self.max_sequence_length)
+                .to_tensor()
+            )
 
-            description_vector = TensorMonad(
-                [[original_tokens], [description]]).map(
-                FeatureExtraction.count_token_occurrences).pad(
-                self.max_sequence_length).to_tensor()
+            description_vector = (
+                TensorMonad([[original_tokens], [description]])
+                .map(FeatureExtraction.count_token_occurrences)
+                .pad(self.max_sequence_length)
+                .to_tensor()
+            )
 
-            length_vector = TensorMonad(
-                [[original_tokens]]).map(
-                FeatureExtraction.length_of_tokens).pad(
-                self.max_sequence_length).to_tensor()
+            length_vector = (
+                TensorMonad([[original_tokens]])
+                .map(FeatureExtraction.length_of_tokens)
+                .pad(self.max_sequence_length)
+                .to_tensor()
+            )
 
-            is_token_verbal_vector = TensorMonad(
-                [[original_tokens]]).map(
-                FeatureExtraction.is_token_verbal).pad(
-                self.max_sequence_length).to_tensor()
+            is_token_verbal_vector = (
+                TensorMonad([[original_tokens]])
+                .map(FeatureExtraction.is_token_verbal)
+                .pad(self.max_sequence_length)
+                .to_tensor()
+            )
 
             features = np.concatenate(
-                [channel_vector, description_vector, length_vector, is_token_verbal_vector], axis=2)
+                [
+                    channel_vector,
+                    description_vector,
+                    length_vector,
+                    is_token_verbal_vector,
+                ],
+                axis=2,
+            )
 
             vector = np.array(vector, dtype=float)
             vector = vector.reshape(1, -1)
@@ -128,13 +160,15 @@ def main():
             return decode_prediction(predictions[0], original_tokens)
 
     model_wrapper = ModelWrapper(model, title_tokenizer, title_vectorizer)
-    print(model_wrapper.predict(
-        "MISSH feat. BURAI – Budapest (Official Music Video) | #misshmusic",
-        "#MISSHMUSIC",
-        "#MISSHMUSIC\n\nhttps://open.spotify.com/artist/6PD6eSZM8ulCg5PRU6mEII\nhttps://music.apple.com/lt/artist/misshmusic/1282462090\nhttps://www.deezer.com/us/artist/13167869\n\nhttps://www.tiktok.com/@misshmusic_official\nhttps://www.facebook.com/MR.MISSH90\nhttps://www.instagram.com/missh90/\n\nKülönköszönet : Ecke22 étterem /www.ecke22etterem.hu                    \n\nA  MisshMusic  2013 óta működő független magyar zenei produkciós iroda. Fő tevékenységünk saját dalok és videoklipek készítése továbbá egyedi tervezésű saját márkás ruházati termékek forgalmazása. Eddigi zenei együttműködő partnereink: G.w.M. , Burai Krisztián, Young G26, IGNI, Hegyi Roland (HR)."
-    ))
+    print(
+        model_wrapper.predict(
+            "MISSH feat. BURAI – Budapest (Official Music Video) | #misshmusic",
+            "#MISSHMUSIC",
+            "#MISSHMUSIC\n\nhttps://open.spotify.com/artist/6PD6eSZM8ulCg5PRU6mEII\nhttps://music.apple.com/lt/artist/misshmusic/1282462090\nhttps://www.deezer.com/us/artist/13167869\n\nhttps://www.tiktok.com/@misshmusic_official\nhttps://www.facebook.com/MR.MISSH90\nhttps://www.instagram.com/missh90/\n\nKülönköszönet : Ecke22 étterem /www.ecke22etterem.hu                    \n\nA  MisshMusic  2013 óta működő független magyar zenei produkciós iroda. Fő tevékenységünk saját dalok és videoklipek készítése továbbá egyedi tervezésű saját márkás ruházati termékek forgalmazása. Eddigi zenei együttműködő partnereink: G.w.M. , Burai Krisztián, Young G26, IGNI, Hegyi Roland (HR).",
+        )
+    )
 
-    with open('out/model.pkl', 'wb') as f:
+    with open("out/model.pkl", "wb") as f:
         dill.dump(model_wrapper, f)
 
 

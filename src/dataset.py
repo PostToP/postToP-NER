@@ -44,10 +44,14 @@ def convert_ner_tags(titles, ner_dict: list[dict]):
         for j, token_e in enumerate(token):
             token_start = title.find(token_e)
             token_end = token_start + len(token_e)
-            title = title[:token_start] + " " * \
-                (token_end - token_start) + title[token_end:]
-            idx = np.round(np.average(
-                [i for i in tags[token_start:token_end] if i != 0]))
+            title = (
+                title[:token_start]
+                + " " * (token_end - token_start)
+                + title[token_end:]
+            )
+            idx = np.round(
+                np.average([i for i in tags[token_start:token_end] if i != 0])
+            )
             if idx == 1:
                 new_tags[j] = "I-Artist"
             elif idx == 2:

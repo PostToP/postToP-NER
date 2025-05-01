@@ -2,7 +2,16 @@ from sklearn.metrics import f1_score
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.layers import Embedding, Dense, Dropout, Bidirectional, GRU, Input, Concatenate, TimeDistributed
+from tensorflow.keras.layers import (
+    Embedding,
+    Dense,
+    Dropout,
+    Bidirectional,
+    GRU,
+    Input,
+    Concatenate,
+    TimeDistributed,
+)
 from tensorflow.keras.models import Model
 import keras
 
@@ -13,17 +22,29 @@ def f1_micro(y_true, y_pred):
     y_pred = tf.argmax(y_pred, axis=-1)
     y_pred = tf.cast(y_pred, tf.int32)
 
-    true_positive_count = tf.reduce_sum(tf.cast(tf.logical_and(
-        tf.equal(y_true, y_pred), tf.not_equal(y_true, 0)), tf.float32))
-    false_positive_count = tf.reduce_sum(tf.cast(tf.logical_and(tf.not_equal(
-        y_true, y_pred), tf.not_equal(y_pred, 0)), tf.float32))
-    false_negative_count = tf.reduce_sum(tf.cast(tf.logical_and(tf.not_equal(
-        y_true, y_pred), tf.not_equal(y_true, 0)), tf.float32))
+    true_positive_count = tf.reduce_sum(
+        tf.cast(
+            tf.logical_and(tf.equal(y_true, y_pred), tf.not_equal(y_true, 0)),
+            tf.float32,
+        )
+    )
+    false_positive_count = tf.reduce_sum(
+        tf.cast(
+            tf.logical_and(tf.not_equal(y_true, y_pred), tf.not_equal(y_pred, 0)),
+            tf.float32,
+        )
+    )
+    false_negative_count = tf.reduce_sum(
+        tf.cast(
+            tf.logical_and(tf.not_equal(y_true, y_pred), tf.not_equal(y_true, 0)),
+            tf.float32,
+        )
+    )
 
-    precision = true_positive_count / \
-        (true_positive_count + false_positive_count + 1e-10)
-    recall = true_positive_count / \
-        (true_positive_count + false_negative_count + 1e-10)
+    precision = true_positive_count / (
+        true_positive_count + false_positive_count + 1e-10
+    )
+    recall = true_positive_count / (true_positive_count + false_negative_count + 1e-10)
 
     f1 = 2 * (precision * recall) / (precision + recall + 1e-10)
     return f1
@@ -49,36 +70,50 @@ def build_model(train_data, val_data) -> Model:
     print(f"Vocabulary size: {vocab_size}")
     print(f"Number of classes: {num_classes}")
 
-    token_input = Input(shape=token_input_shape,
-                        name="token_input", dtype=tf.float32)
-    x = Embedding(input_dim=vocab_size, output_dim=45,
-                  name="token_embedding")(token_input)
+    token_input = Input(shape=token_input_shape, name="token_input", dtype=tf.float32)
+    x = Embedding(input_dim=vocab_size, output_dim=45, name="token_embedding")(
+        token_input
+    )
 
     per_token_feature_input = Input(
-        shape=channel_input_shape, name="channel_feature_input", dtype=tf.float32)
+        shape=channel_input_shape, name="channel_feature_input", dtype=tf.float32
+    )
 
     x = Concatenate()([x, per_token_feature_input])
     x = Bidirectional(GRU(64, return_sequences=True), name="bigru")(x)
 
     x = Dropout(0.2)(x)
-    x = TimeDistributed(Dense(num_classes, activation='softmax'))(x)
+    x = TimeDistributed(Dense(num_classes, activation="softmax"))(x)
     model = Model(inputs=[token_input, per_token_feature_input], outputs=x)
     anti_overfit = EarlyStopping(
-        monitor='val_f1_micro', patience=20, restore_best_weights=True, min_delta=0.005, mode="max")
+        monitor="val_f1_micro",
+        patience=20,
+        restore_best_weights=True,
+        min_delta=0.005,
+        mode="max",
+    )
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
 
-    model.compile(optimizer=optimizer,
-                  loss="sparse_categorical_crossentropy",
-                  metrics=["accuracy", f1_micro]),
+    (
+        model.compile(
+            optimizer=optimizer,
+            loss="sparse_categorical_crossentropy",
+            metrics=["accuracy", f1_micro],
+        ),
+    )
     model.summary()
-    model.fit(train_data, verbose=1,
-              epochs=500, validation_data=val_data, callbacks=[anti_overfit],)
+    model.fit(
+        train_data,
+        verbose=1,
+        epochs=500,
+        validation_data=val_data,
+        callbacks=[anti_overfit],
+    )
     return model
 
 
 def evaluate_model(model, title_val, X_val_channel, ner_val):
-    loss, _, accuracy = model.evaluate(
-        [title_val, X_val_channel], ner_val, verbose=0)
+    loss, _, accuracy = model.evaluate([title_val, X_val_channel], ner_val, verbose=0)
 
     y_pred = model.predict([title_val, X_val_channel], verbose=0)
     y_pred_classes = np.argmax(y_pred, axis=-1)
@@ -92,9 +127,9 @@ def evaluate_model(model, title_val, X_val_channel, ner_val):
             y_true_flat.extend(ner_val[i][:seq_len])
             y_pred_flat.extend(y_pred_classes[i][:seq_len])
 
-    f1_micro = f1_score(y_true_flat, y_pred_flat, average='micro')
-    f1_macro = f1_score(y_true_flat, y_pred_flat, average='macro')
-    f1_weighted = f1_score(y_true_flat, y_pred_flat, average='weighted')
+    f1_micro = f1_score(y_true_flat, y_pred_flat, average="micro")
+    f1_macro = f1_score(y_true_flat, y_pred_flat, average="macro")
+    f1_weighted = f1_score(y_true_flat, y_pred_flat, average="weighted")
 
     f1_per_class = f1_score(y_true_flat, y_pred_flat, average=None)
 
@@ -104,7 +139,7 @@ def evaluate_model(model, title_val, X_val_channel, ner_val):
         "f1_micro": f1_micro,
         "f1_macro": f1_macro,
         "f1_weighted": f1_weighted,
-        "f1_per_class": f1_per_class
+        "f1_per_class": f1_per_class,
     }
 
 

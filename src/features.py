@@ -10,7 +10,9 @@ class FeatureExtraction:
         token = [t.lower() for t in token]
         for i, t in enumerate(token):
             if t in channel_name:
-                if re.search(r'([一-龠ぁ-ゔァ-ヴーａ-ｚＡ-Ｚ０-９々〆〤]+|[a-zA-Z0-9]+)[.!]*', t):
+                if re.search(
+                    r"([一-龠ぁ-ゔァ-ヴーａ-ｚＡ-Ｚ０-９々〆〤]+|[a-zA-Z0-9]+)[.!]*", t
+                ):
                     feature[i] = 1
         return feature[:, np.newaxis]
 
@@ -39,6 +41,8 @@ class FeatureExtraction:
         feature = np.zeros(len(token), dtype=int)
         token = [t.lower() for t in token]
         for i, t in enumerate(token):
-            if re.search(r'([一-龠ぁ-ゔァ-ヴーａ-ｚＡ-Ｚ０-９々〆〤]+|[a-zA-Z0-9]+)', t):
+            if re.search(
+                r"([一-龠ぁ-ゔァ-ヴーａ-ｚＡ-Ｚ０-９々〆〤]+|[a-zA-Z0-9]+)", t
+            ):
                 feature[i] = 1
         return feature[:, np.newaxis]

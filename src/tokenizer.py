@@ -6,7 +6,8 @@ class TokenizerCustom:
 
     def encode(self, text):
         matches = re.finditer(
-            r'([一-龠ぁ-ゔァ-ヴーａ-ｚＡ-Ｚ０-９々〆〤0-9゙゚]+|[a-zA-Z0-9]+)[.!]*', text)
+            r"([一-龠ぁ-ゔァ-ヴーａ-ｚＡ-Ｚ０-９々〆〤0-9゙゚]+|[a-zA-Z0-9]+)[.!]*", text
+        )
         match_positions = [match.span() for match in matches]
         tokens = []
         current_pos = 0
