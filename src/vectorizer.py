@@ -12,6 +12,7 @@ class VectorizerKerasTokenizer:
 
     def train(self, texts):
         self.vectorizer.fit_on_texts(texts)
+        self.vectorizer.word_index["<oov>"] = 1
 
     def encode(self, text):
         sequence = self.vectorizer.texts_to_sequences([text])

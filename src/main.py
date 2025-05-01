@@ -2,15 +2,15 @@ import tensorflow as tf
 from features import FeatureExtraction
 from model import build_model, decode_prediction, evaluate_model
 from tensormonad import TensorMonad
-from text_cleaner import preprocess_tokens
+from text_cleaner import preprocess_tokens, mask_artists_and_titles
 from vectorizer import VectorizerKerasTokenizer, VectorizerNER
-from tokenizer import *
+from tokenizer import TokenizerCustom
 from dataset import convert_ner_tags, fix_dataset_NER, split_dataset
 import dill
 import numpy as np
 import pandas as pd
 
-VOCAB_SIZE = 50
+VOCAB_SIZE = 150
 MAX_SEQUENCE_LENGTH = 45
 
 
@@ -28,7 +28,11 @@ def main():
     dataset["Original Tokens"] = dataset["Title"].apply(
         lambda x: title_tokenizer.encode(x)
     )
+
     dataset["Tokens"] = dataset["Original Tokens"].apply(lambda x: preprocess_tokens(x))
+    dataset["Tokens"] = mask_artists_and_titles(
+        dataset["Tokens"].values, dataset["NER"].values
+    )
 
     ner_vectorizer = VectorizerNER(MAX_SEQUENCE_LENGTH)
     ner_vectorizer.train(dataset["NER"].values)
