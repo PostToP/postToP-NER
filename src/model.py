@@ -83,9 +83,9 @@ def build_model(train_data, val_data) -> Model:
     global_feature_input = Input(
         shape=global_feature_shape, name="global_feature_input", dtype=tf.float32
     )
-    global_repeat_vec = RepeatVector(45, name="global_feature_repeat")(
-        global_feature_input
-    )
+    global_repeat_vec = RepeatVector(
+        token_input_shape[0], name="global_feature_repeat"
+    )(global_feature_input)
 
     x = Concatenate()([x, per_token_feature_input, global_repeat_vec])
     x = Bidirectional(GRU(32, return_sequences=True), name="bigru")(x)
