@@ -147,6 +147,9 @@
   <h1>Source code for features</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensormonad</span><span class="w"> </span><span class="kn">import</span> <span class="n">TensorMonad</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vectorizer</span><span class="w"> </span><span class="kn">import</span> <span class="n">VectorizerLanguage</span>
 
 
 <div class="viewcode-block" id="FeatureExtraction"><a class="viewcode-back" href="../features.html#features.FeatureExtraction">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">FeatureExtraction</span><span class="p">:</span>
@@ -188,11 +191,58 @@
         <span class="n">feature</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">token</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
         <span class="n">token</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">token</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">token</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
-                <span class="sa">r</span><span class="s2">&quot;([一-龠ぁ-ゔァ-ヴーａ-ｚＡ-Ｚ０-９々〆〤]+|[a-zA-Z0-9]+)&quot;</span><span class="p">,</span> <span class="n">t</span>
-            <span class="p">):</span>
+            <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;([一-龠ぁ-ゔァ-ヴーａ-ｚＡ-Ｚ々〆〤]+|[a-zA-Z]+)&quot;</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
                 <span class="n">feature</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="k">return</span> <span class="n">feature</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span></div></div>
+
+
+<div class="viewcode-block" id="extract_features"><a class="viewcode-back" href="../features.html#features.extract_features">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">extract_features</span><span class="p">(</span>
+    <span class="n">dataset</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">max_sequence_length</span><span class="p">:</span> <span class="nb">int</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+    <span class="n">per_token_features</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">feature_channel</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">TensorMonad</span><span class="p">((</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;Original Tokens&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;Channel Name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
+        <span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">FeatureExtraction</span><span class="o">.</span><span class="n">tokens_containing_channel_name</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">max_sequence_length</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">to_tensor</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="n">per_token_features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feature_channel</span><span class="p">)</span>
+
+    <span class="n">feature_description</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">TensorMonad</span><span class="p">((</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;Original Tokens&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;Description&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
+        <span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">FeatureExtraction</span><span class="o">.</span><span class="n">count_token_occurrences</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">max_sequence_length</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">to_tensor</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="n">per_token_features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feature_description</span><span class="p">)</span>
+
+    <span class="n">feature_token_length</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">TensorMonad</span><span class="p">([</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;Original Tokens&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">])</span>
+        <span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">FeatureExtraction</span><span class="o">.</span><span class="n">length_of_tokens</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">max_sequence_length</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">to_tensor</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="n">per_token_features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feature_token_length</span><span class="p">)</span>
+
+    <span class="n">feature_is_token_verbal</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">TensorMonad</span><span class="p">([</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;Original Tokens&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">])</span>
+        <span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">FeatureExtraction</span><span class="o">.</span><span class="n">is_token_verbal</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">max_sequence_length</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">to_tensor</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="n">per_token_features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feature_is_token_verbal</span><span class="p">)</span>
+
+    <span class="n">global_features</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">feature_language</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">TensorMonad</span><span class="p">([</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;Language&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">])</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">VectorizerLanguage</span><span class="p">)</span><span class="o">.</span><span class="n">to_tensor</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="n">global_features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feature_language</span><span class="p">)</span>
+
+    <span class="n">per_token_features</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">per_token_features</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">global_features</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">global_features</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">per_token_features</span><span class="p">,</span> <span class="n">global_features</span></div>
 </pre></div>
 
            </div>

@@ -146,9 +146,8 @@
             
   <h1>Source code for main</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span><span class="w"> </span><span class="nn">tensorflow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tf</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">features</span><span class="w"> </span><span class="kn">import</span> <span class="n">FeatureExtraction</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">features</span><span class="w"> </span><span class="kn">import</span> <span class="n">extract_features</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">model</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_model</span><span class="p">,</span> <span class="n">decode_prediction</span><span class="p">,</span> <span class="n">evaluate_model</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">tensormonad</span><span class="w"> </span><span class="kn">import</span> <span class="n">TensorMonad</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">text_cleaner</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_tokens</span><span class="p">,</span> <span class="n">mask_artists_and_titles</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">vectorizer</span><span class="w"> </span><span class="kn">import</span> <span class="n">VectorizerKerasTokenizer</span><span class="p">,</span> <span class="n">VectorizerNER</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">tokenizer</span><span class="w"> </span><span class="kn">import</span> <span class="n">TokenizerCustom</span>
@@ -164,7 +163,7 @@
 <div class="viewcode-block" id="main"><a class="viewcode-back" href="../main.html#main.main">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
     <span class="n">dataset</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_json</span><span class="p">(</span><span class="s2">&quot;dataset/data.json&quot;</span><span class="p">)</span>
     <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;NER&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span> <span class="o">==</span> <span class="kc">False</span><span class="p">]</span>
-    <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[[</span><span class="s2">&quot;Channel Name&quot;</span><span class="p">,</span> <span class="s2">&quot;Title&quot;</span><span class="p">,</span> <span class="s2">&quot;NER&quot;</span><span class="p">,</span> <span class="s2">&quot;Description&quot;</span><span class="p">]]</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[[</span><span class="s2">&quot;Channel Name&quot;</span><span class="p">,</span> <span class="s2">&quot;Title&quot;</span><span class="p">,</span> <span class="s2">&quot;NER&quot;</span><span class="p">,</span> <span class="s2">&quot;Description&quot;</span><span class="p">,</span> <span class="s2">&quot;Language&quot;</span><span class="p">]]</span>
 
     <span class="n">dataset</span> <span class="o">=</span> <span class="n">fix_dataset_NER</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
 
@@ -185,42 +184,9 @@
     <span class="n">ner_vectorizer</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;NER&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
     <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;NER&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;NER&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">ner_vectorizer</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
 
-    <span class="n">features</span> <span class="o">=</span> <span class="p">[]</span>
-
-    <span class="n">feature_channel</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">TensorMonad</span><span class="p">((</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;Original Tokens&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;Channel Name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
-        <span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">FeatureExtraction</span><span class="o">.</span><span class="n">tokens_containing_channel_name</span><span class="p">)</span>
-        <span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">MAX_SEQUENCE_LENGTH</span><span class="p">)</span>
-        <span class="o">.</span><span class="n">to_tensor</span><span class="p">()</span>
-    <span class="p">)</span>
-    <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feature_channel</span><span class="p">)</span>
-
-    <span class="n">feature_description</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">TensorMonad</span><span class="p">((</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;Original Tokens&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;Description&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
-        <span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">FeatureExtraction</span><span class="o">.</span><span class="n">count_token_occurrences</span><span class="p">)</span>
-        <span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">MAX_SEQUENCE_LENGTH</span><span class="p">)</span>
-        <span class="o">.</span><span class="n">to_tensor</span><span class="p">()</span>
-    <span class="p">)</span>
-    <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feature_description</span><span class="p">)</span>
-
-    <span class="n">feature_token_length</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">TensorMonad</span><span class="p">([</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;Original Tokens&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">])</span>
-        <span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">FeatureExtraction</span><span class="o">.</span><span class="n">length_of_tokens</span><span class="p">)</span>
-        <span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">MAX_SEQUENCE_LENGTH</span><span class="p">)</span>
-        <span class="o">.</span><span class="n">to_tensor</span><span class="p">()</span>
-    <span class="p">)</span>
-    <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feature_token_length</span><span class="p">)</span>
-
-    <span class="n">feature_is_token_verbal</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">TensorMonad</span><span class="p">([</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;Original Tokens&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">])</span>
-        <span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">FeatureExtraction</span><span class="o">.</span><span class="n">is_token_verbal</span><span class="p">)</span>
-        <span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">MAX_SEQUENCE_LENGTH</span><span class="p">)</span>
-        <span class="o">.</span><span class="n">to_tensor</span><span class="p">()</span>
-    <span class="p">)</span>
-    <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feature_is_token_verbal</span><span class="p">)</span>
-
-    <span class="n">features</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">features</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
-    <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;Features&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">features</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">per_token_features</span><span class="p">,</span> <span class="n">global_features</span> <span class="o">=</span> <span class="n">extract_features</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">MAX_SEQUENCE_LENGTH</span><span class="p">)</span>
+    <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;Features&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">per_token_features</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;Global Features&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">global_features</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
 
     <span class="n">train_df</span><span class="p">,</span> <span class="n">validation_df</span> <span class="o">=</span> <span class="n">split_dataset</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">fraction</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
 
@@ -234,24 +200,33 @@
     <span class="n">train_ner</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">train_ner</span><span class="p">))</span>
     <span class="n">val_ner</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">val_ner</span><span class="p">))</span>
 
-    <span class="n">train_features</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">train_df</span><span class="p">[</span><span class="s2">&quot;Features&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
-    <span class="n">val_features</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">validation_df</span><span class="p">[</span><span class="s2">&quot;Features&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
+    <span class="n">train_token_features</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">train_df</span><span class="p">[</span><span class="s2">&quot;Features&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
+    <span class="n">val_token_features</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">validation_df</span><span class="p">[</span><span class="s2">&quot;Features&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
+
+    <span class="n">train_global_features</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">train_df</span><span class="p">[</span><span class="s2">&quot;Global Features&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
+    <span class="n">val_global_features</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">validation_df</span><span class="p">[</span><span class="s2">&quot;Global Features&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
 
     <span class="n">train_dataset</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="o">.</span><span class="n">from_tensor_slices</span><span class="p">(((</span><span class="n">train_titles</span><span class="p">,</span> <span class="n">train_features</span><span class="p">),</span> <span class="n">train_ner</span><span class="p">))</span>
+        <span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="o">.</span><span class="n">from_tensor_slices</span><span class="p">(</span>
+            <span class="p">((</span><span class="n">train_titles</span><span class="p">,</span> <span class="n">train_token_features</span><span class="p">,</span> <span class="n">train_global_features</span><span class="p">),</span> <span class="n">train_ner</span><span class="p">)</span>
+        <span class="p">)</span>
         <span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
         <span class="o">.</span><span class="n">batch</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span>
         <span class="o">.</span><span class="n">prefetch</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">AUTOTUNE</span><span class="p">)</span>
     <span class="p">)</span>
     <span class="n">val_dataset</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="o">.</span><span class="n">from_tensor_slices</span><span class="p">(((</span><span class="n">val_titles</span><span class="p">,</span> <span class="n">val_features</span><span class="p">),</span> <span class="n">val_ner</span><span class="p">))</span>
+        <span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="o">.</span><span class="n">from_tensor_slices</span><span class="p">(</span>
+            <span class="p">((</span><span class="n">val_titles</span><span class="p">,</span> <span class="n">val_token_features</span><span class="p">,</span> <span class="n">val_global_features</span><span class="p">),</span> <span class="n">val_ner</span><span class="p">)</span>
+        <span class="p">)</span>
         <span class="o">.</span><span class="n">batch</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span>
         <span class="o">.</span><span class="n">prefetch</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">AUTOTUNE</span><span class="p">)</span>
     <span class="p">)</span>
 
     <span class="n">model</span> <span class="o">=</span> <span class="n">build_model</span><span class="p">(</span><span class="n">train_dataset</span><span class="p">,</span> <span class="n">val_dataset</span><span class="p">)</span>
 
-    <span class="n">results</span> <span class="o">=</span> <span class="n">evaluate_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">val_titles</span><span class="p">,</span> <span class="n">val_features</span><span class="p">,</span> <span class="n">val_ner</span><span class="p">)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">evaluate_model</span><span class="p">(</span>
+        <span class="n">model</span><span class="p">,</span> <span class="n">val_titles</span><span class="p">,</span> <span class="n">val_token_features</span><span class="p">,</span> <span class="n">val_global_features</span><span class="p">,</span> <span class="n">val_ner</span>
+    <span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
 
     <span class="k">class</span><span class="w"> </span><span class="nc">ModelWrapper</span><span class="p">:</span>
@@ -261,52 +236,27 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">title_vectorizer</span> <span class="o">=</span> <span class="n">title_vectorizer</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">max_sequence_length</span> <span class="o">=</span> <span class="n">MAX_SEQUENCE_LENGTH</span>
 
-        <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">channel_name</span><span class="p">,</span> <span class="n">description</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">channel_name</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
             <span class="n">original_tokens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">title_tokenizer</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
             <span class="n">tokens</span> <span class="o">=</span> <span class="n">preprocess_tokens</span><span class="p">(</span><span class="n">original_tokens</span><span class="p">)</span>
             <span class="n">vector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">title_vectorizer</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span>
-            <span class="n">channel_vector</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">TensorMonad</span><span class="p">([[</span><span class="n">original_tokens</span><span class="p">],</span> <span class="p">[</span><span class="n">channel_name</span><span class="p">]])</span>
-                <span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">FeatureExtraction</span><span class="o">.</span><span class="n">tokens_containing_channel_name</span><span class="p">)</span>
-                <span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_sequence_length</span><span class="p">)</span>
-                <span class="o">.</span><span class="n">to_tensor</span><span class="p">()</span>
+            <span class="n">dataframe</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;Original Tokens&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">original_tokens</span><span class="p">],</span>
+                    <span class="s2">&quot;Channel Name&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">channel_name</span><span class="p">],</span>
+                    <span class="s2">&quot;Description&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">description</span><span class="p">],</span>
+                    <span class="s2">&quot;Language&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">language</span><span class="p">],</span>
+                <span class="p">}</span>
             <span class="p">)</span>
-
-            <span class="n">description_vector</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">TensorMonad</span><span class="p">([[</span><span class="n">original_tokens</span><span class="p">],</span> <span class="p">[</span><span class="n">description</span><span class="p">]])</span>
-                <span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">FeatureExtraction</span><span class="o">.</span><span class="n">count_token_occurrences</span><span class="p">)</span>
-                <span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_sequence_length</span><span class="p">)</span>
-                <span class="o">.</span><span class="n">to_tensor</span><span class="p">()</span>
+            <span class="n">per_token_features</span><span class="p">,</span> <span class="n">global_features</span> <span class="o">=</span> <span class="n">extract_features</span><span class="p">(</span>
+                <span class="n">dataframe</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_sequence_length</span>
             <span class="p">)</span>
-
-            <span class="n">length_vector</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">TensorMonad</span><span class="p">([[</span><span class="n">original_tokens</span><span class="p">]])</span>
-                <span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">FeatureExtraction</span><span class="o">.</span><span class="n">length_of_tokens</span><span class="p">)</span>
-                <span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_sequence_length</span><span class="p">)</span>
-                <span class="o">.</span><span class="n">to_tensor</span><span class="p">()</span>
-            <span class="p">)</span>
-
-            <span class="n">is_token_verbal_vector</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">TensorMonad</span><span class="p">([[</span><span class="n">original_tokens</span><span class="p">]])</span>
-                <span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">FeatureExtraction</span><span class="o">.</span><span class="n">is_token_verbal</span><span class="p">)</span>
-                <span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_sequence_length</span><span class="p">)</span>
-                <span class="o">.</span><span class="n">to_tensor</span><span class="p">()</span>
-            <span class="p">)</span>
-
-            <span class="n">features</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
-                <span class="p">[</span>
-                    <span class="n">channel_vector</span><span class="p">,</span>
-                    <span class="n">description_vector</span><span class="p">,</span>
-                    <span class="n">length_vector</span><span class="p">,</span>
-                    <span class="n">is_token_verbal_vector</span><span class="p">,</span>
-                <span class="p">],</span>
-                <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-            <span class="p">)</span>
-
             <span class="n">vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">vector</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
             <span class="n">vector</span> <span class="o">=</span> <span class="n">vector</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
-            <span class="n">predictions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">([</span><span class="n">vector</span><span class="p">,</span> <span class="n">features</span><span class="p">])</span>
+            <span class="n">predictions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">vector</span><span class="p">,</span> <span class="n">per_token_features</span><span class="p">,</span> <span class="n">global_features</span><span class="p">]</span>
+            <span class="p">)</span>
             <span class="n">predictions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">decode_prediction</span><span class="p">(</span><span class="n">predictions</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">original_tokens</span><span class="p">)</span>
 
