@@ -1,11 +1,12 @@
 import dill
 from flask import Flask, request, jsonify
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from features import FeatureExtraction
+from features import FeatureExtraction, extract_features
 import numpy as np
 from model import decode_prediction
 from text_cleaner import preprocess_tokens
 from tensormonad import TensorMonad
+import pandas as pd
 
 
 def main():
