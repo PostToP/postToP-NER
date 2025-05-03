@@ -3,7 +3,7 @@ from features import FeatureExtraction
 from model import build_model, decode_prediction, evaluate_model
 from tensormonad import TensorMonad
 from text_cleaner import preprocess_tokens, mask_artists_and_titles
-from vectorizer import VectorizerKerasTokenizer, VectorizerNER
+from vectorizer import VectorizerKerasTokenizer, VectorizerNER, VectorizerLanguage
 from tokenizer import TokenizerCustom
 from dataset import convert_ner_tags, fix_dataset_NER, split_dataset
 import dill
@@ -17,7 +17,7 @@ MAX_SEQUENCE_LENGTH = 45
 def main():
     dataset = pd.read_json("dataset/data.json")
     dataset = dataset[dataset["NER"].isna() == False]
-    dataset = dataset[["Channel Name", "Title", "NER", "Description"]]
+    dataset = dataset[["Channel Name", "Title", "NER", "Description", "Language"]]
 
     dataset = fix_dataset_NER(dataset)
 
@@ -38,7 +38,7 @@ def main():
     ner_vectorizer.train(dataset["NER"].values)
     dataset["NER"] = dataset["NER"].apply(lambda x: ner_vectorizer.encode(x))
 
-    features = []
+    token_features = []
 
     feature_channel = (
         TensorMonad((dataset["Original Tokens"].values, dataset["Channel Name"].values))
@@ -46,7 +46,7 @@ def main():
         .pad(MAX_SEQUENCE_LENGTH)
         .to_tensor()
     )
-    features.append(feature_channel)
+    token_features.append(feature_channel)
 
     feature_description = (
         TensorMonad((dataset["Original Tokens"].values, dataset["Description"].values))
@@ -54,7 +54,7 @@ def main():
         .pad(MAX_SEQUENCE_LENGTH)
         .to_tensor()
     )
-    features.append(feature_description)
+    token_features.append(feature_description)
 
     feature_token_length = (
         TensorMonad([dataset["Original Tokens"].values])
@@ -62,7 +62,7 @@ def main():
         .pad(MAX_SEQUENCE_LENGTH)
         .to_tensor()
     )
-    features.append(feature_token_length)
+    token_features.append(feature_token_length)
 
     feature_is_token_verbal = (
         TensorMonad([dataset["Original Tokens"].values])
@@ -70,10 +70,19 @@ def main():
         .pad(MAX_SEQUENCE_LENGTH)
         .to_tensor()
     )
-    features.append(feature_is_token_verbal)
+    token_features.append(feature_is_token_verbal)
+    token_features = np.concatenate(token_features, axis=2)
+    dataset["Features"] = token_features.tolist()
 
-    features = np.concatenate(features, axis=2)
-    dataset["Features"] = features.tolist()
+    global_features = []
+
+    feature_language = (
+        TensorMonad([dataset["Language"].values]).map(VectorizerLanguage).to_tensor()
+    )
+    global_features.append(feature_language)
+    global_features = np.concatenate(global_features, axis=1)
+
+    dataset["Global Features"] = feature_language.tolist()
 
     train_df, validation_df = split_dataset(dataset, fraction=0.8, random_state=42)
 
@@ -87,24 +96,33 @@ def main():
     train_ner = np.array(list(train_ner))
     val_ner = np.array(list(val_ner))
 
-    train_features = np.array(list(train_df["Features"].values))
-    val_features = np.array(list(validation_df["Features"].values))
+    train_token_features = np.array(list(train_df["Features"].values))
+    val_token_features = np.array(list(validation_df["Features"].values))
+
+    train_global_features = np.array(list(train_df["Global Features"].values))
+    val_global_features = np.array(list(validation_df["Global Features"].values))
 
     train_dataset = (
-        tf.data.Dataset.from_tensor_slices(((train_titles, train_features), train_ner))
+        tf.data.Dataset.from_tensor_slices(
+            ((train_titles, train_token_features, train_global_features), train_ner)
+        )
         .shuffle(1000)
         .batch(1024)
         .prefetch(tf.data.AUTOTUNE)
     )
     val_dataset = (
-        tf.data.Dataset.from_tensor_slices(((val_titles, val_features), val_ner))
+        tf.data.Dataset.from_tensor_slices(
+            ((val_titles, val_token_features, val_global_features), val_ner)
+        )
         .batch(1024)
         .prefetch(tf.data.AUTOTUNE)
     )
 
     model = build_model(train_dataset, val_dataset)
 
-    results = evaluate_model(model, val_titles, val_features, val_ner)
+    results = evaluate_model(
+        model, val_titles, val_token_features, val_global_features, val_ner
+    )
     print(results)
 
     class ModelWrapper:
@@ -114,7 +132,7 @@ def main():
             self.title_vectorizer = title_vectorizer
             self.max_sequence_length = MAX_SEQUENCE_LENGTH
 
-        def predict(self, title, channel_name, description):
+        def predict(self, title, channel_name, description, language=None):
             original_tokens = self.title_tokenizer.encode(title)
             tokens = preprocess_tokens(original_tokens)
             vector = self.title_vectorizer.encode(tokens)
@@ -146,6 +164,10 @@ def main():
                 .to_tensor()
             )
 
+            language_vector = (
+                TensorMonad([[language]]).map(VectorizerLanguage).to_tensor()
+            )
+
             features = np.concatenate(
                 [
                     channel_vector,
@@ -159,7 +181,7 @@ def main():
             vector = np.array(vector, dtype=float)
             vector = vector.reshape(1, -1)
 
-            predictions = self.model.predict([vector, features])
+            predictions = self.model.predict([vector, features, language_vector])
             predictions = np.argmax(predictions, axis=-1)
             return decode_prediction(predictions[0], original_tokens)
 

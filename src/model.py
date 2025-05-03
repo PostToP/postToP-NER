@@ -11,6 +11,7 @@ from tensorflow.keras.layers import (
     Input,
     Concatenate,
     TimeDistributed,
+    RepeatVector,
 )
 from tensorflow.keras.models import Model
 import keras
@@ -62,13 +63,13 @@ def number_of_classes(values):
 def build_model(train_data, val_data) -> Model:
     token_input_shape = train_data.element_spec[0][0].shape
     token_input_shape = (token_input_shape[1],)
-    channel_input_shape = train_data.element_spec[0][1].shape
-    channel_input_shape = (channel_input_shape[1], channel_input_shape[2])
+    per_token_feature_shape = train_data.element_spec[0][1].shape
+    per_token_feature_shape = (per_token_feature_shape[1], per_token_feature_shape[2])
+    global_feature_shape = train_data.element_spec[0][2].shape
+    global_feature_shape = (global_feature_shape[1],)
 
     vocab_size = number_of_classes(train_data.map(lambda x, y: x[0]))
     num_classes = number_of_classes(train_data.map(lambda x, y: y))
-    print(f"Vocabulary size: {vocab_size}")
-    print(f"Number of classes: {num_classes}")
 
     token_input = Input(shape=token_input_shape, name="token_input", dtype=tf.float32)
     x = Embedding(input_dim=vocab_size, output_dim=45, name="token_embedding")(
@@ -76,15 +77,24 @@ def build_model(train_data, val_data) -> Model:
     )
 
     per_token_feature_input = Input(
-        shape=channel_input_shape, name="channel_feature_input", dtype=tf.float32
+        shape=per_token_feature_shape, name="channel_feature_input", dtype=tf.float32
     )
 
-    x = Concatenate()([x, per_token_feature_input])
-    x = Bidirectional(GRU(64, return_sequences=True), name="bigru")(x)
+    global_feature_input = Input(
+        shape=global_feature_shape, name="global_feature_input", dtype=tf.float32
+    )
+    global_repeat_vec = RepeatVector(45, name="global_feature_repeat")(
+        global_feature_input
+    )
+
+    x = Concatenate()([x, per_token_feature_input, global_repeat_vec])
+    x = Bidirectional(GRU(32, return_sequences=True), name="bigru")(x)
 
     x = Dropout(0.2)(x)
     x = TimeDistributed(Dense(num_classes, activation="softmax"))(x)
-    model = Model(inputs=[token_input, per_token_feature_input], outputs=x)
+    model = Model(
+        inputs=[token_input, per_token_feature_input, global_feature_input], outputs=x
+    )
     anti_overfit = EarlyStopping(
         monitor="val_f1_micro",
         patience=20,
@@ -112,10 +122,12 @@ def build_model(train_data, val_data) -> Model:
     return model
 
 
-def evaluate_model(model, title_val, X_val_channel, ner_val):
-    loss, _, accuracy = model.evaluate([title_val, X_val_channel], ner_val, verbose=0)
+def evaluate_model(model, title_val, X_val_channel, globalfeatures, ner_val):
+    loss, _, accuracy = model.evaluate(
+        [title_val, X_val_channel, globalfeatures], ner_val, verbose=0
+    )
 
-    y_pred = model.predict([title_val, X_val_channel], verbose=0)
+    y_pred = model.predict([title_val, X_val_channel, globalfeatures], verbose=0)
     y_pred_classes = np.argmax(y_pred, axis=-1)
 
     y_true_flat = []
