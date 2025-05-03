@@ -1,9 +1,8 @@
 import tensorflow as tf
-from features import FeatureExtraction
+from features import extract_features
 from model import build_model, decode_prediction, evaluate_model
-from tensormonad import TensorMonad
 from text_cleaner import preprocess_tokens, mask_artists_and_titles
-from vectorizer import VectorizerKerasTokenizer, VectorizerNER, VectorizerLanguage
+from vectorizer import VectorizerKerasTokenizer, VectorizerNER
 from tokenizer import TokenizerCustom
 from dataset import convert_ner_tags, fix_dataset_NER, split_dataset
 import dill
@@ -38,51 +37,9 @@ def main():
     ner_vectorizer.train(dataset["NER"].values)
     dataset["NER"] = dataset["NER"].apply(lambda x: ner_vectorizer.encode(x))
 
-    token_features = []
-
-    feature_channel = (
-        TensorMonad((dataset["Original Tokens"].values, dataset["Channel Name"].values))
-        .map(FeatureExtraction.tokens_containing_channel_name)
-        .pad(MAX_SEQUENCE_LENGTH)
-        .to_tensor()
-    )
-    token_features.append(feature_channel)
-
-    feature_description = (
-        TensorMonad((dataset["Original Tokens"].values, dataset["Description"].values))
-        .map(FeatureExtraction.count_token_occurrences)
-        .pad(MAX_SEQUENCE_LENGTH)
-        .to_tensor()
-    )
-    token_features.append(feature_description)
-
-    feature_token_length = (
-        TensorMonad([dataset["Original Tokens"].values])
-        .map(FeatureExtraction.length_of_tokens)
-        .pad(MAX_SEQUENCE_LENGTH)
-        .to_tensor()
-    )
-    token_features.append(feature_token_length)
-
-    feature_is_token_verbal = (
-        TensorMonad([dataset["Original Tokens"].values])
-        .map(FeatureExtraction.is_token_verbal)
-        .pad(MAX_SEQUENCE_LENGTH)
-        .to_tensor()
-    )
-    token_features.append(feature_is_token_verbal)
-    token_features = np.concatenate(token_features, axis=2)
-    dataset["Features"] = token_features.tolist()
-
-    global_features = []
-
-    feature_language = (
-        TensorMonad([dataset["Language"].values]).map(VectorizerLanguage).to_tensor()
-    )
-    global_features.append(feature_language)
-    global_features = np.concatenate(global_features, axis=1)
-
-    dataset["Global Features"] = feature_language.tolist()
+    per_token_features, global_features = extract_features(dataset, MAX_SEQUENCE_LENGTH)
+    dataset["Features"] = per_token_features.tolist()
+    dataset["Global Features"] = global_features.tolist()
 
     train_df, validation_df = split_dataset(dataset, fraction=0.8, random_state=42)
 
@@ -136,52 +93,23 @@ def main():
             original_tokens = self.title_tokenizer.encode(title)
             tokens = preprocess_tokens(original_tokens)
             vector = self.title_vectorizer.encode(tokens)
-            channel_vector = (
-                TensorMonad([[original_tokens], [channel_name]])
-                .map(FeatureExtraction.tokens_containing_channel_name)
-                .pad(self.max_sequence_length)
-                .to_tensor()
+            dataframe = pd.DataFrame(
+                {
+                    "Original Tokens": [original_tokens],
+                    "Channel Name": [channel_name],
+                    "Description": [description],
+                    "Language": [language],
+                }
             )
-
-            description_vector = (
-                TensorMonad([[original_tokens], [description]])
-                .map(FeatureExtraction.count_token_occurrences)
-                .pad(self.max_sequence_length)
-                .to_tensor()
+            per_token_features, global_features = extract_features(
+                dataframe, self.max_sequence_length
             )
-
-            length_vector = (
-                TensorMonad([[original_tokens]])
-                .map(FeatureExtraction.length_of_tokens)
-                .pad(self.max_sequence_length)
-                .to_tensor()
-            )
-
-            is_token_verbal_vector = (
-                TensorMonad([[original_tokens]])
-                .map(FeatureExtraction.is_token_verbal)
-                .pad(self.max_sequence_length)
-                .to_tensor()
-            )
-
-            language_vector = (
-                TensorMonad([[language]]).map(VectorizerLanguage).to_tensor()
-            )
-
-            features = np.concatenate(
-                [
-                    channel_vector,
-                    description_vector,
-                    length_vector,
-                    is_token_verbal_vector,
-                ],
-                axis=2,
-            )
-
             vector = np.array(vector, dtype=float)
             vector = vector.reshape(1, -1)
 
-            predictions = self.model.predict([vector, features, language_vector])
+            predictions = self.model.predict(
+                [vector, per_token_features, global_features]
+            )
             predictions = np.argmax(predictions, axis=-1)
             return decode_prediction(predictions[0], original_tokens)
 

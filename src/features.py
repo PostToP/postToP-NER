@@ -1,5 +1,8 @@
 import re
 import numpy as np
+import pandas as pd
+from tensormonad import TensorMonad
+from vectorizer import VectorizerLanguage
 
 
 class FeatureExtraction:
@@ -44,3 +47,52 @@ class FeatureExtraction:
             if re.search(r"([一-龠ぁ-ゔァ-ヴーａ-ｚＡ-Ｚ々〆〤]+|[a-zA-Z]+)", t):
                 feature[i] = 1
         return feature[:, np.newaxis]
+
+
+def extract_features(
+    dataset: pd.DataFrame, max_sequence_length: int
+) -> tuple[np.ndarray, np.ndarray]:
+    per_token_features = []
+
+    feature_channel = (
+        TensorMonad((dataset["Original Tokens"].values, dataset["Channel Name"].values))
+        .map(FeatureExtraction.tokens_containing_channel_name)
+        .pad(max_sequence_length)
+        .to_tensor()
+    )
+    per_token_features.append(feature_channel)
+
+    feature_description = (
+        TensorMonad((dataset["Original Tokens"].values, dataset["Description"].values))
+        .map(FeatureExtraction.count_token_occurrences)
+        .pad(max_sequence_length)
+        .to_tensor()
+    )
+    per_token_features.append(feature_description)
+
+    feature_token_length = (
+        TensorMonad([dataset["Original Tokens"].values])
+        .map(FeatureExtraction.length_of_tokens)
+        .pad(max_sequence_length)
+        .to_tensor()
+    )
+    per_token_features.append(feature_token_length)
+
+    feature_is_token_verbal = (
+        TensorMonad([dataset["Original Tokens"].values])
+        .map(FeatureExtraction.is_token_verbal)
+        .pad(max_sequence_length)
+        .to_tensor()
+    )
+    per_token_features.append(feature_is_token_verbal)
+
+    global_features = []
+    feature_language = (
+        TensorMonad([dataset["Language"].values]).map(VectorizerLanguage).to_tensor()
+    )
+    global_features.append(feature_language)
+
+    per_token_features = np.concatenate(per_token_features, axis=2)
+    global_features = np.concatenate(global_features, axis=1)
+
+    return per_token_features, global_features
