@@ -7,14 +7,16 @@ from tensorflow.keras.layers import (
     Dense,
     Dropout,
     Bidirectional,
-    GRU,
     Input,
     Concatenate,
     TimeDistributed,
     RepeatVector,
+    LSTM,
+    LayerNormalization,
 )
 from tensorflow.keras.models import Model
 import keras
+from config.config import TABLE_BACK
 
 
 @keras.saving.register_keras_serializable()
@@ -88,34 +90,35 @@ def build_model(train_data, val_data) -> Model:
     )(global_feature_input)
 
     x = Concatenate()([x, per_token_feature_input, global_repeat_vec])
-    x = Bidirectional(GRU(32, return_sequences=True), name="bigru")(x)
+    x = LayerNormalization()(x)
+    x = Bidirectional(LSTM(32, return_sequences=True), name="bigru")(x)
+    x = LayerNormalization()(x)
 
-    x = Dropout(0.2)(x)
+    x = Dropout(0.1)(x)
     x = TimeDistributed(Dense(num_classes, activation="softmax"))(x)
     model = Model(
         inputs=[token_input, per_token_feature_input, global_feature_input], outputs=x
     )
     anti_overfit = EarlyStopping(
         monitor="val_f1_micro",
-        patience=20,
+        patience=5,
         restore_best_weights=True,
         min_delta=0.005,
         mode="max",
     )
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-2)
 
-    (
-        model.compile(
-            optimizer=optimizer,
-            loss="sparse_categorical_crossentropy",
-            metrics=["accuracy", f1_micro],
-        ),
+    model.compile(
+        optimizer=optimizer,
+        loss="sparse_categorical_crossentropy",
+        metrics=["accuracy", f1_micro],
     )
+
     model.summary()
     model.fit(
         train_data,
         verbose=1,
-        epochs=500,
+        epochs=5000,
         validation_data=val_data,
         callbacks=[anti_overfit],
     )
@@ -151,33 +154,8 @@ def evaluate_model(model, title_val, X_val_channel, globalfeatures, ner_val):
         "f1_micro": f1_micro,
         "f1_macro": f1_macro,
         "f1_weighted": f1_weighted,
-        "f1_per_class": f1_per_class,
+        # "f1_per_class": f1_per_class,
+        "f1_per_class": {
+            TABLE_BACK[i]: f1_per_class[i] for i in range(len(f1_per_class))
+        },
     }
-
-
-def decode_prediction(prediction, tokens):
-    output = {}
-    current_tag = 0
-    current = ""
-    for i, token in enumerate(tokens):
-        if prediction[i] != current_tag:
-            if current_tag not in output:
-                output[current_tag] = []
-            output[current_tag].append(current.strip())
-            current_tag = prediction[i]
-            current = ""
-        current = current + " " + token
-    if current_tag not in output:
-        output[current_tag] = []
-    output[current_tag].append(current.strip())
-    if 0 in output:
-        output.pop(0)
-    if 1 in output:
-        output["Artist"] = output.pop(1)
-    else:
-        output["Artist"] = []
-    if 2 in output:
-        output["Title"] = output.pop(2)
-    else:
-        output["Title"] = []
-    return output
