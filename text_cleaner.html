@@ -91,12 +91,7 @@
 <li class="toctree-l2"><a class="reference internal" href="model.html">model module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="prod.html">prod module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tensormonad.html">tensormonad module</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">text_cleaner module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#text_cleaner.mask_artists_and_titles"><code class="docutils literal notranslate"><span class="pre">mask_artists_and_titles()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#text_cleaner.normalize_text_to_ascii"><code class="docutils literal notranslate"><span class="pre">normalize_text_to_ascii()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#text_cleaner.preprocess_tokens"><code class="docutils literal notranslate"><span class="pre">preprocess_tokens()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">text_cleaner module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tokenizer.html">tokenizer module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="vectorizer.html">vectorizer module</a></li>
 </ul>
@@ -167,39 +162,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <section id="module-text_cleaner">
-<span id="text-cleaner-module"></span><h1>text_cleaner module<a class="headerlink" href="#module-text_cleaner" title="Permalink to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="text_cleaner.mask_artists_and_titles">
-<span class="sig-prename descclassname"><span class="pre">text_cleaner.</span></span><span class="sig-name descname"><span class="pre">mask_artists_and_titles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tokens</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ner_tags</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/text_cleaner.html#mask_artists_and_titles"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#text_cleaner.mask_artists_and_titles" title="Permalink to this definition">¶</a></dt>
-<dd><p>Mask tokens thats part of any ‘Inside’ tag.
-If a token was ever tagged with an ‘Outside’ tag, it will not be masked.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>tokens</strong> (<em>list</em><em>[</em><em>list</em><em>[</em><em>str</em><em>]</em><em>]</em>) – List of tokens</p></li>
-<li><p><strong>ner_tags</strong> (<em>list</em><em>[</em><em>list</em><em>[</em><em>str</em><em>]</em><em>]</em>) – List of NER tags</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>List of tokens with masked tokens</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>list[list[str]]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="text_cleaner.normalize_text_to_ascii">
-<span class="sig-prename descclassname"><span class="pre">text_cleaner.</span></span><span class="sig-name descname"><span class="pre">normalize_text_to_ascii</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/text_cleaner.html#normalize_text_to_ascii"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#text_cleaner.normalize_text_to_ascii" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="text_cleaner.preprocess_tokens">
-<span class="sig-prename descclassname"><span class="pre">text_cleaner.</span></span><span class="sig-name descname"><span class="pre">preprocess_tokens</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tokens</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/text_cleaner.html#preprocess_tokens"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#text_cleaner.preprocess_tokens" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
+  <section id="text-cleaner-module">
+<h1>text_cleaner module<a class="headerlink" href="#text-cleaner-module" title="Permalink to this heading">¶</a></h1>
 </section>
 
 

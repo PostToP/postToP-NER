@@ -92,24 +92,7 @@
 <li class="toctree-l2"><a class="reference internal" href="tensormonad.html">tensormonad module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="text_cleaner.html">text_cleaner module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tokenizer.html">tokenizer module</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">vectorizer module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#vectorizer.VectorizerKerasTokenizer"><code class="docutils literal notranslate"><span class="pre">VectorizerKerasTokenizer</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#vectorizer.VectorizerKerasTokenizer.encode"><code class="docutils literal notranslate"><span class="pre">VectorizerKerasTokenizer.encode()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#vectorizer.VectorizerKerasTokenizer.encode_batch"><code class="docutils literal notranslate"><span class="pre">VectorizerKerasTokenizer.encode_batch()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#vectorizer.VectorizerKerasTokenizer.name"><code class="docutils literal notranslate"><span class="pre">VectorizerKerasTokenizer.name</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#vectorizer.VectorizerKerasTokenizer.train"><code class="docutils literal notranslate"><span class="pre">VectorizerKerasTokenizer.train()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#vectorizer.VectorizerLanguage"><code class="docutils literal notranslate"><span class="pre">VectorizerLanguage()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#vectorizer.VectorizerNER"><code class="docutils literal notranslate"><span class="pre">VectorizerNER</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#vectorizer.VectorizerNER.encode"><code class="docutils literal notranslate"><span class="pre">VectorizerNER.encode()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#vectorizer.VectorizerNER.encode_batch"><code class="docutils literal notranslate"><span class="pre">VectorizerNER.encode_batch()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#vectorizer.VectorizerNER.name"><code class="docutils literal notranslate"><span class="pre">VectorizerNER.name</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#vectorizer.VectorizerNER.train"><code class="docutils literal notranslate"><span class="pre">VectorizerNER.train()</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">vectorizer module</a></li>
 </ul>
 </li>
 </ul>
@@ -180,63 +163,6 @@
             
   <section id="module-vectorizer">
 <span id="vectorizer-module"></span><h1>vectorizer module<a class="headerlink" href="#module-vectorizer" title="Permalink to this heading">¶</a></h1>
-<dl class="py class">
-<dt class="sig sig-object py" id="vectorizer.VectorizerKerasTokenizer">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">vectorizer.</span></span><span class="sig-name descname"><span class="pre">VectorizerKerasTokenizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vocab_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">64</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_sequence_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">64</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/vectorizer.html#VectorizerKerasTokenizer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vectorizer.VectorizerKerasTokenizer" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="py method">
-<dt class="sig sig-object py" id="vectorizer.VectorizerKerasTokenizer.encode">
-<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/vectorizer.html#VectorizerKerasTokenizer.encode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vectorizer.VectorizerKerasTokenizer.encode" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="vectorizer.VectorizerKerasTokenizer.encode_batch">
-<span class="sig-name descname"><span class="pre">encode_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texts</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/vectorizer.html#VectorizerKerasTokenizer.encode_batch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vectorizer.VectorizerKerasTokenizer.encode_batch" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="vectorizer.VectorizerKerasTokenizer.name">
-<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'VectorizerKerasTokenizer'</span></em><a class="headerlink" href="#vectorizer.VectorizerKerasTokenizer.name" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="vectorizer.VectorizerKerasTokenizer.train">
-<span class="sig-name descname"><span class="pre">train</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texts</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/vectorizer.html#VectorizerKerasTokenizer.train"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vectorizer.VectorizerKerasTokenizer.train" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="vectorizer.VectorizerLanguage">
-<span class="sig-prename descclassname"><span class="pre">vectorizer.</span></span><span class="sig-name descname"><span class="pre">VectorizerLanguage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lang</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="_modules/vectorizer.html#VectorizerLanguage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vectorizer.VectorizerLanguage" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="vectorizer.VectorizerNER">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">vectorizer.</span></span><span class="sig-name descname"><span class="pre">VectorizerNER</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_sequence_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">64</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/vectorizer.html#VectorizerNER"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vectorizer.VectorizerNER" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="py method">
-<dt class="sig sig-object py" id="vectorizer.VectorizerNER.encode">
-<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tags</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/vectorizer.html#VectorizerNER.encode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vectorizer.VectorizerNER.encode" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="vectorizer.VectorizerNER.encode_batch">
-<span class="sig-name descname"><span class="pre">encode_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tags</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/vectorizer.html#VectorizerNER.encode_batch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vectorizer.VectorizerNER.encode_batch" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="vectorizer.VectorizerNER.name">
-<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'VectorizerNER'</span></em><a class="headerlink" href="#vectorizer.VectorizerNER.name" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="vectorizer.VectorizerNER.train">
-<span class="sig-name descname"><span class="pre">train</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texts</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/vectorizer.html#VectorizerNER.train"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vectorizer.VectorizerNER.train" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
 </section>
 
 

@@ -86,18 +86,7 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="dataset.html">dataset module</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">features module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#features.FeatureExtraction"><code class="docutils literal notranslate"><span class="pre">FeatureExtraction</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#features.FeatureExtraction.batch"><code class="docutils literal notranslate"><span class="pre">FeatureExtraction.batch()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#features.FeatureExtraction.count_token_occurrences"><code class="docutils literal notranslate"><span class="pre">FeatureExtraction.count_token_occurrences()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#features.FeatureExtraction.is_token_verbal"><code class="docutils literal notranslate"><span class="pre">FeatureExtraction.is_token_verbal()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#features.FeatureExtraction.length_of_tokens"><code class="docutils literal notranslate"><span class="pre">FeatureExtraction.length_of_tokens()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#features.FeatureExtraction.tokens_containing_channel_name"><code class="docutils literal notranslate"><span class="pre">FeatureExtraction.tokens_containing_channel_name()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#features.extract_features"><code class="docutils literal notranslate"><span class="pre">extract_features()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">features module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="main.html">main module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="model.html">model module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="prod.html">prod module</a></li>
@@ -173,44 +162,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <section id="module-features">
-<span id="features-module"></span><h1>features module<a class="headerlink" href="#module-features" title="Permalink to this heading">¶</a></h1>
-<dl class="py class">
-<dt class="sig sig-object py" id="features.FeatureExtraction">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">features.</span></span><span class="sig-name descname"><span class="pre">FeatureExtraction</span></span><a class="reference internal" href="_modules/features.html#FeatureExtraction"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#features.FeatureExtraction" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="py method">
-<dt class="sig sig-object py" id="features.FeatureExtraction.batch">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">function</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/features.html#FeatureExtraction.batch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#features.FeatureExtraction.batch" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="features.FeatureExtraction.count_token_occurrences">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">count_token_occurrences</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">token</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/features.html#FeatureExtraction.count_token_occurrences"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#features.FeatureExtraction.count_token_occurrences" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="features.FeatureExtraction.is_token_verbal">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">is_token_verbal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">token</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/features.html#FeatureExtraction.is_token_verbal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#features.FeatureExtraction.is_token_verbal" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="features.FeatureExtraction.length_of_tokens">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">length_of_tokens</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">token</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/features.html#FeatureExtraction.length_of_tokens"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#features.FeatureExtraction.length_of_tokens" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="features.FeatureExtraction.tokens_containing_channel_name">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">tokens_containing_channel_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">token</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/features.html#FeatureExtraction.tokens_containing_channel_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#features.FeatureExtraction.tokens_containing_channel_name" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="features.extract_features">
-<span class="sig-prename descclassname"><span class="pre">features.</span></span><span class="sig-name descname"><span class="pre">extract_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_sequence_length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/features.html#extract_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#features.extract_features" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
+  <section id="features-module">
+<h1>features module<a class="headerlink" href="#features-module" title="Permalink to this heading">¶</a></h1>
 </section>
 
 
