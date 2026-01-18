@@ -118,22 +118,6 @@ def extract_features(
     return per_token_features, global_features
 
 
-def normalize_text_to_ascii(text: str) -> str:
-    text = fix_text(text)
-    normalized_text = normalize("NFKD", text)
-    ascii_text = unidecode("".join([c for c in normalized_text if not combining(c)]))
-    return ascii_text
-
-
-def preprocess_tokens(tokens):
-    new_tokens = []
-    for token in tokens:
-        token = token.lower()
-        token = normalize_text_to_ascii(token)
-        new_tokens.append(token)
-    return new_tokens
-
-
 def mask_artists_and_titles(
     tokens: list[list[str]], ner_tags: list[list[str]]
 ) -> list[list[str]]:
@@ -179,41 +163,10 @@ def concat_dataset(dataset):
     return dataset
 
 
-def convert_ner_tags(titles, ner_dict: list[dict]):
-    numeric_tags = []
-    custom_tokenizer = TokenizerCustom()
-    for i, title in enumerate(titles):
-        token = custom_tokenizer.encode(title)
-        tags = [0] * len(title)
-        for entry in ner_dict[i]:
-            start, end, type = entry["start"], entry["end"], entry["type"]
-            tags[start:end] = [TABLE[type]] * (end - start)
-        new_tags = [0] * len(token)
-        for j, token_e in enumerate(token):
-            token_start = title.find(token_e)
-            token_end = token_start + len(token_e)
-            title = (
-                title[:token_start]
-                + " " * (token_end - token_start)
-                + title[token_end:]
-            )
-            idx = np.round(np.average([i for i in tags[token_start:token_end]]))
-            new_tags[j] = TABLE_BACK.get(int(idx), "O")
-        numeric_tags.append(new_tags)
-
-    return numeric_tags
-
-
 def do_stuff(df, ner_vectorizer, title_vectorizer, train=False):
     df = concat_dataset(df)
-    ner_tags = convert_ner_tags(df["Text"].values, df["NER"].values)
+    # todo
 
-    df["NER"] = ner_tags
-
-    title_tokenizer = TokenizerCustom()
-    df["Original Tokens"] = df["Text"].apply(lambda x: title_tokenizer.encode(x))
-
-    df["Tokens"] = df["Original Tokens"].apply(lambda x: preprocess_tokens(x))
     df["Tokens"] = mask_artists_and_titles(df["Tokens"].values, df["NER"].values)
     if train:
         ner_vectorizer.train(df["NER"].values)

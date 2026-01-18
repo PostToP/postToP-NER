@@ -33,11 +33,18 @@ def run_train() -> None:
     train_model()
 
 
+def run_tokenize() -> None:
+    from model.tokenize import tokenize_dataset
+
+    tokenize_dataset()
+
+
 def main() -> None:
     COMMANDS = {
         "fetch": run_fetch,
-        "preprocess": run_preprocess,
         "split": run_split,
+        "tokenize": run_tokenize,
+        "preprocess": run_preprocess,
         "feature": run_feature_extraction,
         "train": run_train,
     }

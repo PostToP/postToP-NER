@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import pandas as pd
 
 import psycopg2
 from dotenv import load_dotenv
@@ -63,6 +64,58 @@ def save_videos_to_json(
         json.dump(videos, f, indent=4)
 
 
+def utf16_to_unicode_index(text, utf16_index):
+    unicode_index = 0
+    current_utf16_index = 0
+
+    while current_utf16_index < utf16_index and unicode_index < len(text):
+        current_utf16_index += 2 if ord(text[unicode_index]) >= 0x10000 else 1
+        unicode_index += 1
+
+    return unicode_index
+
+
+def fix_dataset_NER(dataset):
+    for idx, row in dataset.iterrows():
+        ner_elements = dataset.loc[
+            idx, "NER"
+        ]  # {end, type, start,source, selectedText}[]
+        dataset.loc[idx, "NER"] = []
+        for element in ner_elements:
+            tag = element["type"]
+            source = (
+                row["Title"] if element["source"] == "title" else row["Description"]
+            )
+            start = utf16_to_unicode_index(source, element["start"])
+            end = utf16_to_unicode_index(source, element["end"])
+            added = {
+                "start": start,
+                "end": end,
+                "source": element["source"],
+                "entry": element["selectedText"],
+                "type": tag,
+            }
+            dataset.loc[idx, "NER"].append(added)
+    return dataset
+
+
+def validate_ner_indices(dataset):
+    for idx, row in dataset.iterrows():
+        title = row["Title"]
+        description = row["Description"]
+        for entity in row["NER"]:
+            source = title if entity["source"] == "title" else description
+            start = entity["start"]
+            end = entity["end"]
+            selected_text = entity["entry"]
+            extracted_text = source[start:end]
+            if extracted_text != selected_text:
+                logger.warning(
+                    f"Mismatch in row {idx}: expected '{selected_text}', got '{extracted_text}'"
+                )
+    logger.info("NER indices validation completed.")
+
+
 def main() -> None:
     videos = fetch_videos()
     if not videos:
@@ -70,6 +123,12 @@ def main() -> None:
         return
 
     video_json = convert_postgres_videos_to_json(videos)
+    df = pd.DataFrame(video_json)
+    df = fix_dataset_NER(df)
+    validate_ner_indices(df)
+
+    video_json = df.to_dict(orient="records")
+
     save_videos_to_json(video_json)
     logger.debug(f"Saved {len(video_json)} videos to dataset/videos.json")
 

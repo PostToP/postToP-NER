@@ -101,7 +101,7 @@ def build_model(train_data, val_data) -> Model:
     )
     anti_overfit = EarlyStopping(
         monitor="val_f1_micro",
-        patience=5,
+        patience=100,
         restore_best_weights=True,
         min_delta=0.005,
         mode="max",
@@ -156,6 +156,8 @@ def evaluate_model(model, title_val, X_val_channel, globalfeatures, ner_val):
         "f1_weighted": f1_weighted,
         # "f1_per_class": f1_per_class,
         "f1_per_class": {
-            TABLE_BACK[i]: f1_per_class[i] for i in range(len(f1_per_class))
+            # TABLE_BACK[i]: f1_per_class[i] for i in range(len(f1_per_class))
+            TABLE_BACK.get(i, str(i)): f1_per_class[i]
+            for i in range(len(f1_per_class))
         },
     }
