@@ -175,7 +175,7 @@ cython_debug/
 
 out/
 dataset/
-model/
+/model/
 spacy/
 
 .vscode/
