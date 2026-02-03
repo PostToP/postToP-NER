@@ -111,8 +111,9 @@ def validate_ner_indices(dataset):
             extracted_text = source[start:end]
             if extracted_text != selected_text:
                 logger.warning(
-                    f"Mismatch in row {idx}: expected '{selected_text}', got '{extracted_text}'"
+                    f"Mismatch in row {row['YT ID']}: expected '{selected_text}', got '{extracted_text}'"
                 )
+
     logger.info("NER indices validation completed.")
 
 
