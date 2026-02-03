@@ -2,19 +2,26 @@ import numpy as np
 import pandas as pd
 
 import re
-from config.config import TABLE, TABLE_BACK
 from tokenizer.TokenizerCustom import TokenizerCustom
 from vectorizer.VectorizerKerasTokenizer import VectorizerKerasTokenizer
 from vectorizer.VectorizerNER import VectorizerNER
-from unicodedata import combining, normalize
-from ftfy import fix_text
-from unidecode import unidecode
 from tensormonad import TensorMonad
 from vectorizer.VectorizerLanguage import VectorizerLanguage
+import spacy
+from spacy.tokens import Doc
+
+MAX_SEQUENCE_LENGTH = 100
+VOCAB_SIZE = 15000
+
+nlp = spacy.load("en_core_web_sm")
 
 
-MAX_SEQUENCE_LENGTH = 300
-VOCAB_SIZE = 5000
+def gg(text):
+    tokenized = TokenizerCustom().encode(text)
+    return Doc(nlp.vocab, tokenized)
+
+
+nlp.tokenizer = gg
 
 
 class FeatureExtraction:
@@ -60,6 +67,61 @@ class FeatureExtraction:
                 feature[i] = 1
         return feature[:, np.newaxis]
 
+    @staticmethod
+    def token_appears_in_hashtags(token, description):
+        feature = np.zeros(len(token), dtype=int)
+        token = [t.lower() for t in token]
+        hashtags = re.findall(r"#(\w+)", description.lower())
+        for i, t in enumerate(token):
+            if t in hashtags:
+                feature[i] = 1
+        return feature[:, np.newaxis]
+
+    def token_appears_in_links(token, description):
+        feature = np.zeros(len(token), dtype=int)
+        token = [t.lower() for t in token]
+        links = re.findall(r"(https?://[^\s]+)", description.lower())
+        for i, t in enumerate(token):
+            if t in links:
+                feature[i] = 1
+        return feature[:, np.newaxis]
+
+    def mark_title_tokens(all_token, title_tokens):
+        feature = np.zeros(len(all_token), dtype=int)
+        len_of_title = len(title_tokens)
+        feature[:len_of_title] = 1
+        return feature[:, np.newaxis]
+
+    @staticmethod
+    def add_pos_tag_features(tokens):
+        doc = nlp(tokens)
+        pos_tags = [token.pos_ for token in doc]
+        feature = np.zeros((len(tokens), 10), dtype=int)
+        for i, pos in enumerate(pos_tags):
+            if pos in ["NOUN", "PROPN"]:
+                feature[i][0] = 1
+            elif pos == "VERB":
+                feature[i][1] = 1
+            elif pos == "ADJ":
+                feature[i][2] = 1
+            elif pos == "ADV":
+                feature[i][3] = 1
+            elif pos == "PUNCT":
+                feature[i][4] = 1
+            elif pos == "PART":
+                feature[i][5] = 1
+            elif pos == "ADP":
+                feature[i][6] = 1
+            elif pos == "PRON":
+                feature[i][7] = 1
+            elif pos == "NUM":
+                feature[i][8] = 1
+            elif pos == "AUX":
+                feature[i][8] = 1
+            else:
+                feature[i][9] = 1
+        return feature
+
 
 def extract_features(
     dataset: pd.DataFrame, max_sequence_length: int
@@ -67,7 +129,7 @@ def extract_features(
     per_token_features = []
 
     feature_channel = (
-        TensorMonad((dataset["Original Tokens"].values, dataset["Channel Name"].values))
+        TensorMonad((dataset["Text"].values, dataset["Channel Name"].values))
         .map(FeatureExtraction.tokens_containing_channel_name)
         .pad(max_sequence_length)
         .to_tensor()
@@ -75,7 +137,7 @@ def extract_features(
     per_token_features.append(feature_channel)
 
     feature_token_freq_title = (
-        TensorMonad((dataset["Original Tokens"].values, dataset["Title"].values))
+        TensorMonad((dataset["Text"].values, dataset["Original Title"].values))
         .map(FeatureExtraction.count_token_occurrences)
         .pad(max_sequence_length)
         .to_tensor()
@@ -83,7 +145,7 @@ def extract_features(
     per_token_features.append(feature_token_freq_title)
 
     feature_token_freq_desc = (
-        TensorMonad((dataset["Original Tokens"].values, dataset["Description"].values))
+        TensorMonad((dataset["Text"].values, dataset["Original Description"].values))
         .map(FeatureExtraction.count_token_occurrences)
         .pad(max_sequence_length)
         .to_tensor()
@@ -91,7 +153,7 @@ def extract_features(
     per_token_features.append(feature_token_freq_desc)
 
     feature_token_length = (
-        TensorMonad([dataset["Original Tokens"].values])
+        TensorMonad([dataset["Text"].values])
         .map(FeatureExtraction.length_of_tokens)
         .pad(max_sequence_length)
         .to_tensor()
@@ -99,12 +161,44 @@ def extract_features(
     per_token_features.append(feature_token_length)
 
     feature_is_token_verbal = (
-        TensorMonad([dataset["Original Tokens"].values])
+        TensorMonad([dataset["Text"].values])
         .map(FeatureExtraction.is_token_verbal)
         .pad(max_sequence_length)
         .to_tensor()
     )
     per_token_features.append(feature_is_token_verbal)
+
+    feature_token_in_hashtags = (
+        TensorMonad((dataset["Text"].values, dataset["Original Description"].values))
+        .map(FeatureExtraction.token_appears_in_hashtags)
+        .pad(max_sequence_length)
+        .to_tensor()
+    )
+    per_token_features.append(feature_token_in_hashtags)
+
+    feature_token_in_links = (
+        TensorMonad((dataset["Text"].values, dataset["Original Description"].values))
+        .map(FeatureExtraction.token_appears_in_links)
+        .pad(max_sequence_length)
+        .to_tensor()
+    )
+    per_token_features.append(feature_token_in_links)
+
+    feature_mark_title_tokens = (
+        TensorMonad((dataset["Text"].values, dataset["Title"].values))
+        .map(FeatureExtraction.mark_title_tokens)
+        .pad(max_sequence_length)
+        .to_tensor()
+    )
+    per_token_features.append(feature_mark_title_tokens)
+
+    pos_title_features = (
+        TensorMonad([dataset["Original Title"] + " " + dataset["Original Description"]])
+        .map(FeatureExtraction.add_pos_tag_features)
+        .pad(max_sequence_length)
+        .to_tensor()
+    )
+    per_token_features.append(pos_title_features)
 
     global_features = []
     feature_language = (
@@ -132,6 +226,7 @@ def mask_artists_and_titles(
     Returns:
         list[list[str]]: List of tokens with masked tokens
     """
+    return tokens  # Temporary disable masking for better results
     not_to_mask = set()
     for t, tags in zip(tokens, ner_tags):
         for i, tag in enumerate(tags):
@@ -145,30 +240,17 @@ def mask_artists_and_titles(
 
 
 def concat_dataset(dataset):
-    dataset["Text"] = dataset["Title"] + " " + dataset["Description"]
-    for idx, row in dataset.iterrows():
-        title_length = len(row["Title"]) + 1  # +1 for the space
-        updated_ner = []
-        for entity in row["NER"]:
-            if entity["source"] == "title":
-                updated_ner.append(entity)
-            elif entity["source"] == "description":
-                updated_entity = entity.copy()
-                updated_entity["start"] += title_length
-                updated_entity["end"] += title_length
-                updated_ner.append(updated_entity)
-            updated_ner[-1].pop("source", None)
-        dataset.at[idx, "NER"] = updated_ner
+    dataset["Text"] = dataset["Title"] + dataset["Description"]
+    dataset["NER"] = dataset["Title NER"] + dataset["Description NER"]
 
     return dataset
 
 
 def do_stuff(df, ner_vectorizer, title_vectorizer, train=False):
     df = concat_dataset(df)
-    # todo
 
-    df["Tokens"] = mask_artists_and_titles(df["Tokens"].values, df["NER"].values)
     if train:
+        df["Text"] = mask_artists_and_titles(df["Text"].values, df["NER"].values)
         ner_vectorizer.train(df["NER"].values)
     df["NER"] = df["NER"].apply(lambda x: ner_vectorizer.encode(x))
 
@@ -177,10 +259,8 @@ def do_stuff(df, ner_vectorizer, title_vectorizer, train=False):
     df["Global Features"] = global_features.tolist()
 
     if train:
-        title_vectorizer.train(df["Tokens"].values)
-    df["title_vec"] = (
-        df["Tokens"].apply(lambda x: title_vectorizer.encode(x)).to_numpy()
-    )
+        title_vectorizer.train(df["Text"].values)
+    df["title_vec"] = df["Text"].apply(lambda x: title_vectorizer.encode(x)).to_numpy()
 
     return df
 
@@ -195,6 +275,9 @@ def save_split(path, X, y):
     )
 
 
+import joblib
+
+
 def feature_extraction():
     train_df = pd.read_json("dataset/p3_dataset_train.json")
     val_df = pd.read_json("dataset/p3_dataset_val.json")
@@ -203,6 +286,8 @@ def feature_extraction():
 
     train_df = do_stuff(train_df, ner_vectorizer, title_vectorizer, train=True)
     val_df = do_stuff(val_df, ner_vectorizer, title_vectorizer, train=False)
+
+    joblib.dump(title_vectorizer, "model/title_vectorizer.pkl")
 
     train_ner = np.array(list(train_df["NER"].values))
     val_ner = np.array(list(val_df["NER"].values))
