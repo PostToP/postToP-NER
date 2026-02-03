@@ -24,12 +24,14 @@ def main():
 
     train_dataset = (
         tf.data.Dataset.from_tensor_slices((train_df[0], train_df[1]))
+        .cache()
         .shuffle(1000)
         .batch(1024)
         .prefetch(tf.data.AUTOTUNE)
     )
     val_dataset = (
         tf.data.Dataset.from_tensor_slices((val_df[0], val_df[1]))
+        .cache()
         .batch(1024)
         .prefetch(tf.data.AUTOTUNE)
     )
@@ -38,6 +40,8 @@ def main():
 
     results = evaluate_model(model, val_df[0][0], val_df[0][1], val_df[0][2], val_df[1])
     print(results)
+
+    model.save("model/final_model.keras")
 
 
 if __name__ == "__main__":
