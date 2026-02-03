@@ -11,3 +11,7 @@ TABLE = {
     "FEATURING": 9,
 }
 TABLE_BACK = {v: k for k, v in TABLE.items()}
+
+
+MAX_SEQUENCE_LENGTH = 100
+VOCAB_SIZE = 15000

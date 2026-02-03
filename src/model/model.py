@@ -16,7 +16,7 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model
 import keras
-from config.config import TABLE_BACK
+from config.config import TABLE_BACK, VOCAB_SIZE
 
 
 @keras.saving.register_keras_serializable()
@@ -53,15 +53,6 @@ def f1_micro(y_true, y_pred):
     return f1
 
 
-def number_of_classes(values):
-    num_classes = 0
-    for batch in values:
-        max_tag = tf.reduce_max(batch)
-        if max_tag > num_classes:
-            num_classes = max_tag
-    return int(num_classes.numpy()) + 1
-
-
 def build_model(train_data, val_data) -> Model:
     token_input_shape = train_data.element_spec[0][0].shape
     token_input_shape = (token_input_shape[1],)
@@ -70,11 +61,8 @@ def build_model(train_data, val_data) -> Model:
     global_feature_shape = train_data.element_spec[0][2].shape
     global_feature_shape = (global_feature_shape[1],)
 
-    vocab_size = number_of_classes(train_data.map(lambda x, y: x[0]))
-    num_classes = number_of_classes(train_data.map(lambda x, y: y))
-
     token_input = Input(shape=token_input_shape, name="token_input", dtype=tf.float32)
-    x = Embedding(input_dim=vocab_size, output_dim=2**3, name="token_embedding")(
+    x = Embedding(input_dim=VOCAB_SIZE, output_dim=2**3, name="token_embedding")(
         token_input
     )
 
@@ -95,7 +83,7 @@ def build_model(train_data, val_data) -> Model:
     x = LayerNormalization()(x)
 
     x = Dropout(0.1)(x)
-    x = TimeDistributed(Dense(num_classes, activation="softmax"))(x)
+    x = TimeDistributed(Dense(len(TABLE_BACK), activation="softmax"))(x)
     model = Model(
         inputs=[token_input, per_token_feature_input, global_feature_input], outputs=x
     )

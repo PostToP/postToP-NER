@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 import re
+from config.config import MAX_SEQUENCE_LENGTH, VOCAB_SIZE
 from tokenizer.TokenizerCustom import TokenizerCustom
 from vectorizer.VectorizerKerasTokenizer import VectorizerKerasTokenizer
 from vectorizer.VectorizerNER import VectorizerNER
@@ -9,9 +10,6 @@ from tensormonad import TensorMonad
 from vectorizer.VectorizerLanguage import VectorizerLanguage
 import spacy
 from spacy.tokens import Doc
-
-MAX_SEQUENCE_LENGTH = 100
-VOCAB_SIZE = 15000
 
 nlp = spacy.load("en_core_web_sm")
 
