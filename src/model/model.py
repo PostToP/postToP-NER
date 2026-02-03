@@ -1,7 +1,7 @@
 from sklearn.metrics import f1_score
 import tensorflow as tf
 import numpy as np
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from tensorflow.keras.layers import (
     Embedding,
     Dense,
@@ -74,7 +74,7 @@ def build_model(train_data, val_data) -> Model:
     num_classes = number_of_classes(train_data.map(lambda x, y: y))
 
     token_input = Input(shape=token_input_shape, name="token_input", dtype=tf.float32)
-    x = Embedding(input_dim=vocab_size, output_dim=45, name="token_embedding")(
+    x = Embedding(input_dim=vocab_size, output_dim=2**3, name="token_embedding")(
         token_input
     )
 
@@ -91,7 +91,7 @@ def build_model(train_data, val_data) -> Model:
 
     x = Concatenate()([x, per_token_feature_input, global_repeat_vec])
     x = LayerNormalization()(x)
-    x = Bidirectional(LSTM(32, return_sequences=True), name="bigru")(x)
+    x = Bidirectional(LSTM(2**4, return_sequences=True), name="bigru")(x)
     x = LayerNormalization()(x)
 
     x = Dropout(0.1)(x)
@@ -106,7 +106,16 @@ def build_model(train_data, val_data) -> Model:
         min_delta=0.005,
         mode="max",
     )
-    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-2)
+    reduce_lr = ReduceLROnPlateau(
+        monitor="val_f1_micro",
+        factor=0.5,
+        patience=25,
+        min_lr=1e-6,
+        mode="max",
+        verbose=1,
+    )
+
+    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-2, clipnorm=1.0)
 
     model.compile(
         optimizer=optimizer,
@@ -120,7 +129,7 @@ def build_model(train_data, val_data) -> Model:
         verbose=1,
         epochs=5000,
         validation_data=val_data,
-        callbacks=[anti_overfit],
+        callbacks=[anti_overfit, reduce_lr],
     )
     return model
 
