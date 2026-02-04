@@ -120,6 +120,25 @@ class FeatureExtraction:
                 feature[i][9] = 1
         return feature
 
+    @staticmethod
+    def token_distance_from_start(token):
+        feature = np.arange(len(token), dtype=int)
+        return feature[:, np.newaxis]
+
+    @staticmethod
+    def token_capitalization(token):
+        feature = np.zeros((len(token), 4), dtype=int)
+        for i, t in enumerate(token):
+            if t.isupper():  # ALL CAPS (AAAAAA)
+                feature[i][0] = 1
+            elif t.islower():  # all lower (aaaaaa)
+                feature[i][1] = 1
+            elif t.istitle():  # Title Case (Aaaaaa)
+                feature[i][2] = 1
+            else:  # Mixed (AaAaAa)
+                feature[i][3] = 1
+        return feature
+
 
 def extract_features(
     dataset: pd.DataFrame, max_sequence_length: int
@@ -197,6 +216,22 @@ def extract_features(
         .to_tensor()
     )
     per_token_features.append(pos_title_features)
+
+    # feature_token_distance = (
+    #     TensorMonad([dataset["Text"].values])
+    #     .map(FeatureExtraction.token_distance_from_start)
+    #     .pad(max_sequence_length)
+    #     .to_tensor()
+    # )
+    # per_token_features.append(feature_token_distance)
+
+    feature_token_capitalization = (
+        TensorMonad([dataset["Original Title"] + " " + dataset["Original Description"]])
+        .map(FeatureExtraction.token_capitalization)
+        .pad(max_sequence_length)
+        .to_tensor()
+    )
+    per_token_features.append(feature_token_capitalization)
 
     global_features = []
     feature_language = (
