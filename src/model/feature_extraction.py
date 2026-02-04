@@ -142,13 +142,13 @@ def extract_features(
     )
     per_token_features.append(feature_token_freq_title)
 
-    feature_token_freq_desc = (
-        TensorMonad((dataset["Text"].values, dataset["Original Description"].values))
-        .map(FeatureExtraction.count_token_occurrences)
-        .pad(max_sequence_length)
-        .to_tensor()
-    )
-    per_token_features.append(feature_token_freq_desc)
+    # feature_token_freq_desc = (
+    #     TensorMonad((dataset["Text"].values, dataset["Original Description"].values))
+    #     .map(FeatureExtraction.count_token_occurrences)
+    #     .pad(max_sequence_length)
+    #     .to_tensor()
+    # )
+    # per_token_features.append(feature_token_freq_desc)
 
     feature_token_length = (
         TensorMonad([dataset["Text"].values])
@@ -158,37 +158,37 @@ def extract_features(
     )
     per_token_features.append(feature_token_length)
 
-    feature_is_token_verbal = (
-        TensorMonad([dataset["Text"].values])
-        .map(FeatureExtraction.is_token_verbal)
-        .pad(max_sequence_length)
-        .to_tensor()
-    )
-    per_token_features.append(feature_is_token_verbal)
+    # feature_is_token_verbal = (
+    #     TensorMonad([dataset["Text"].values])
+    #     .map(FeatureExtraction.is_token_verbal)
+    #     .pad(max_sequence_length)
+    #     .to_tensor()
+    # )
+    # per_token_features.append(feature_is_token_verbal)
 
-    feature_token_in_hashtags = (
-        TensorMonad((dataset["Text"].values, dataset["Original Description"].values))
-        .map(FeatureExtraction.token_appears_in_hashtags)
-        .pad(max_sequence_length)
-        .to_tensor()
-    )
-    per_token_features.append(feature_token_in_hashtags)
+    # feature_token_in_hashtags = (
+    #     TensorMonad((dataset["Text"].values, dataset["Original Description"].values))
+    #     .map(FeatureExtraction.token_appears_in_hashtags)
+    #     .pad(max_sequence_length)
+    #     .to_tensor()
+    # )
+    # per_token_features.append(feature_token_in_hashtags)
 
-    feature_token_in_links = (
-        TensorMonad((dataset["Text"].values, dataset["Original Description"].values))
-        .map(FeatureExtraction.token_appears_in_links)
-        .pad(max_sequence_length)
-        .to_tensor()
-    )
-    per_token_features.append(feature_token_in_links)
+    # feature_token_in_links = (
+    #     TensorMonad((dataset["Text"].values, dataset["Original Description"].values))
+    #     .map(FeatureExtraction.token_appears_in_links)
+    #     .pad(max_sequence_length)
+    #     .to_tensor()
+    # )
+    # per_token_features.append(feature_token_in_links)
 
-    feature_mark_title_tokens = (
-        TensorMonad((dataset["Text"].values, dataset["Title"].values))
-        .map(FeatureExtraction.mark_title_tokens)
-        .pad(max_sequence_length)
-        .to_tensor()
-    )
-    per_token_features.append(feature_mark_title_tokens)
+    # feature_mark_title_tokens = (
+    #     TensorMonad((dataset["Text"].values, dataset["Title"].values))
+    #     .map(FeatureExtraction.mark_title_tokens)
+    #     .pad(max_sequence_length)
+    #     .to_tensor()
+    # )
+    # per_token_features.append(feature_mark_title_tokens)
 
     pos_title_features = (
         TensorMonad([dataset["Original Title"] + " " + dataset["Original Description"]])
