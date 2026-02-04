@@ -277,8 +277,8 @@ import joblib
 
 
 def feature_extraction():
-    train_df = pd.read_json("dataset/p3_dataset_train.json")
-    val_df = pd.read_json("dataset/p3_dataset_val.json")
+    train_df = pd.read_json("dataset/p4_dataset_train.json")
+    val_df = pd.read_json("dataset/p4_dataset_val.json")
     ner_vectorizer = VectorizerNER(MAX_SEQUENCE_LENGTH)
     title_vectorizer = VectorizerKerasTokenizer(VOCAB_SIZE, MAX_SEQUENCE_LENGTH)
 
@@ -289,5 +289,5 @@ def feature_extraction():
 
     train_ner = np.array(list(train_df["NER"].values))
     val_ner = np.array(list(val_df["NER"].values))
-    save_split("dataset/p4_dataset_train.npz", train_df, train_ner)
-    save_split("dataset/p4_dataset_val.npz", val_df, val_ner)
+    save_split("dataset/p5_dataset_train.npz", train_df, train_ner)
+    save_split("dataset/p5_dataset_val.npz", val_df, val_ner)
