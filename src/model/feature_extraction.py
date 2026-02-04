@@ -94,30 +94,32 @@ class FeatureExtraction:
     def add_pos_tag_features(tokens):
         doc = nlp(tokens)
         pos_tags = [token.pos_ for token in doc]
-        feature = np.zeros((len(tokens), 10), dtype=int)
+
+        table = {
+            "ADJ": 0,
+            "ADP": 1,
+            "ADV": 2,
+            "AUX": 3,
+            "CCONJ": 4,
+            "DET": 5,
+            "INTJ": 6,
+            "NOUN": 7,
+            "NUM": 8,
+            "PART": 9,
+            "PRON": 10,
+            "PROPN": 11,
+            "PUNCT": 12,
+            "SCONJ": 13,
+            "SYM": 14,
+            "VERB": 15,
+        }
+        feature = np.zeros((len(tokens), len(table) + 1), dtype=int)
+
         for i, pos in enumerate(pos_tags):
-            if pos in ["NOUN", "PROPN"]:
-                feature[i][0] = 1
-            elif pos == "VERB":
-                feature[i][1] = 1
-            elif pos == "ADJ":
-                feature[i][2] = 1
-            elif pos == "ADV":
-                feature[i][3] = 1
-            elif pos == "PUNCT":
-                feature[i][4] = 1
-            elif pos == "PART":
-                feature[i][5] = 1
-            elif pos == "ADP":
-                feature[i][6] = 1
-            elif pos == "PRON":
-                feature[i][7] = 1
-            elif pos == "NUM":
-                feature[i][8] = 1
-            elif pos == "AUX":
-                feature[i][8] = 1
+            if pos in table:
+                feature[i][table[pos]] = 1
             else:
-                feature[i][9] = 1
+                feature[i][-1] = 1
         return feature
 
     @staticmethod
