@@ -1,5 +1,6 @@
-from keras.preprocessing.sequence import pad_sequences
 import numpy as np
+
+from vectorizer.VectorizerKerasTokenizer import custom_pad_sequences
 
 
 class TensorMonad:
@@ -10,7 +11,9 @@ class TensorMonad:
         return TensorMonad([func(*arg) for arg in zip(*self.data, *args)])
 
     def pad(self, maxlen):
-        return TensorMonad(pad_sequences(self.data, maxlen=maxlen, padding="post"))
+        return TensorMonad(
+            custom_pad_sequences(self.data, maxlen=maxlen, padding="post")
+        )
 
     def to_tensor(self):
         return np.array(self.data)
