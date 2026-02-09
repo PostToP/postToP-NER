@@ -123,6 +123,72 @@ class FeatureExtraction:
         return feature
 
     @staticmethod
+    def add_tag_tag_features(tokens):
+        doc = nlp(tokens)
+        tag_tags = [token.tag_ for token in doc]
+
+        table = {
+            "CC": 0,
+            "CD": 1,
+            "DT": 2,
+            "EX": 3,
+            "FW": 4,
+            "IN": 5,
+            "JJ": 6,
+            "JJR": 7,
+            "JJS": 8,
+            "LS": 9,
+            "MD": 10,
+            "NN": 11,
+            "NNS": 12,
+            "NNP": 13,
+            "NNPS": 14,
+            "PDT": 15,
+            "POS": 16,
+            "PRP": 17,
+            "PRP$": 18,
+            "RB": 19,
+            "RBR": 20,
+            "RBS": 21,
+            "RP": 22,
+            "SYM": 23,
+            "TO": 24,
+            "UH": 25,
+            "VB": 26,
+            "VBD": 27,
+            "VBG": 28,
+            "VBN": 29,
+            "VBP": 30,
+            "VBZ": 31,
+            "WDT": 32,
+            "WP": 33,
+            "WP$": 34,
+            "WRB": 35,
+            "_SP": 36,
+            ",": 37,
+            "''": 38,
+            ":": 39,
+            "HYPH": 40,
+            "XX": 41,
+            "NFP": 42,
+            "-LRB-": 43,
+            "-RRB-": 44,
+            "ADD": 45,
+            ".": 46,
+            "``": 47,
+            "AFX": 48,
+            "$": 49,
+        }
+        feature = np.zeros((len(tokens), len(table) + 1), dtype=int)
+
+        for i, pos in enumerate(tag_tags):
+            if pos in table:
+                feature[i][table[pos]] = 1
+            else:
+                feature[i][-1] = 1
+        return feature
+
+    @staticmethod
     def token_distance_from_start(token):
         feature = np.arange(len(token), dtype=int)
         return feature[:, np.newaxis]
@@ -235,6 +301,14 @@ def extract_features(
     )
     per_token_features.append(feature_token_capitalization)
 
+    feature_tag_tags = (
+        TensorMonad([dataset["Original Title"] + " " + dataset["Original Description"]])
+        .map(FeatureExtraction.add_tag_tag_features)
+        .pad(max_sequence_length)
+        .to_tensor()
+    )
+    per_token_features.append(feature_tag_tags)
+
     global_features = []
     feature_language = (
         TensorMonad([dataset["Language"].values]).map(VectorizerLanguage).to_tensor()
@@ -261,7 +335,7 @@ def mask_artists_and_titles(
     Returns:
         list[list[str]]: List of tokens with masked tokens
     """
-    return tokens  # Temporary disable masking for better results
+    # return tokens  # Temporary disable masking for better results
     not_to_mask = set()
     for t, tags in zip(tokens, ner_tags):
         for i, tag in enumerate(tags):
