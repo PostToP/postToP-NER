@@ -17,7 +17,7 @@ def convert_ner_tags(titles, ner_dict: list[dict]):
         tags = [0] * len(title)
         for entry in ner_dict[i]:
             start, end, type = entry["start"], entry["end"], entry["type"]
-            tags[start:end] = [TABLE[type]] * (end - start)
+            tags[start:end] = [TABLE.get(type, 0)] * (end - start)
         new_tags = [0] * len(token)
         for j, token_e in enumerate(token):
             token_start = title.find(token_e)
