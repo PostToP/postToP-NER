@@ -207,6 +207,28 @@ class FeatureExtraction:
                 feature[i][3] = 1
         return feature
 
+    def mark_tokens_inside_quotes(tokens):
+        feature = np.zeros(len(tokens), dtype=int)
+        inside_quotes = False
+        for i, t in enumerate(tokens):
+            if t in ['"', "“", "”"]:
+                inside_quotes = not inside_quotes
+            if inside_quotes:
+                feature[i] = 1
+        return feature[:, np.newaxis]
+
+    def mark_tokens_inside_parentheses(tokens):
+        feature = np.zeros(len(tokens), dtype=int)
+        inside_parentheses = False
+        for i, t in enumerate(tokens):
+            if t in ["(", "（", "[", "【", "〈", "《", "「", "『"]:
+                inside_parentheses = True
+            elif t in [")", "）", "]", "】", "〉", "》", "」", "』"]:
+                inside_parentheses = False
+            if inside_parentheses:
+                feature[i] = 1
+        return feature[:, np.newaxis]
+
 
 def extract_features(
     dataset: pd.DataFrame, max_sequence_length: int
