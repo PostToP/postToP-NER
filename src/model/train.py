@@ -94,7 +94,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
         batch_size=1024,
         shuffle=True,
         num_workers=0,
-        pin_memory=True,
+        pin_memory=False,
         worker_init_fn=lambda worker_id: np.random.seed(seed + worker_id),
         generator=g,
     )
@@ -103,7 +103,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
         batch_size=1024,
         shuffle=False,
         num_workers=0,
-        pin_memory=True,
+        pin_memory=False,
         worker_init_fn=lambda worker_id: np.random.seed(seed + worker_id),
         generator=g,
     )
