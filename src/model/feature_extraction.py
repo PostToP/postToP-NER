@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import pandas as pd
 
@@ -11,6 +12,7 @@ from vectorizer.VectorizerLanguage import VectorizerLanguage
 import spacy
 from spacy.tokens import Doc
 
+logger = logging.getLogger("experiment")
 nlp = spacy.load("en_core_web_sm")
 
 
@@ -233,103 +235,111 @@ class FeatureExtraction:
 def extract_features(
     dataset: pd.DataFrame, max_sequence_length: int
 ) -> tuple[np.ndarray, np.ndarray]:
+    per_token_feature_functions = {
+        "Token Appears in Channel Name": (
+            FeatureExtraction.tokens_containing_channel_name,
+            (
+                dataset["Text"].to_numpy(copy=False),
+                dataset["Channel Name"].to_numpy(copy=False),
+            ),
+        ),
+        "Token Frequency in Title": (
+            FeatureExtraction.count_token_occurrences,
+            (
+                dataset["Text"].to_numpy(copy=False),
+                dataset["Original Title"].to_numpy(copy=False),
+            ),
+        ),
+        # "Token Frequency in Description": (
+        #     FeatureExtraction.count_token_occurrences,
+        #     (
+        #         dataset["Text"].to_numpy(copy=False),
+        #         dataset["Original Description"].to_numpy(copy=False),
+        #     ),
+        # ),
+        "Length of Token": (
+            FeatureExtraction.length_of_tokens,
+            (dataset["Text"].to_numpy(copy=False),),
+        ),
+        # "Is Token Verbal": (
+        #     FeatureExtraction.is_token_verbal,
+        #     (dataset["Text"].to_numpy(copy=False),),
+        # ),
+        # "Token Appears in Hashtags": (
+        #     FeatureExtraction.token_appears_in_hashtags,
+        #     (
+        #         dataset["Text"].to_numpy(copy=False),
+        #         dataset["Original Description"].to_numpy(copy=False),
+        #     ),
+        # ),
+        # "Token Appears in Links": (
+        #     FeatureExtraction.token_appears_in_links,
+        #     (
+        #         dataset["Text"].to_numpy(copy=False),
+        #         dataset["Original Description"].to_numpy(copy=False),
+        #     ),
+        # ),
+        # "Mark Title Tokens": (
+        #     FeatureExtraction.mark_title_tokens,
+        #     (
+        #         dataset["Text"].to_numpy(copy=False),
+        #         dataset["Original Title"].to_numpy(copy=False),
+        #     ),
+        # ),
+        "Add POS Tag Features": (
+            FeatureExtraction.add_pos_tag_features,
+            [
+                (
+                    dataset["Original Title"] + " " + dataset["Original Description"]
+                ).to_numpy(copy=False)
+            ],
+        ),
+        # "Token Distance from Start": (
+        #     FeatureExtraction.token_distance_from_start,
+        #     (dataset["Text"].to_numpy(copy=False),),
+        # ),
+        "Token Capitalization": (
+            FeatureExtraction.token_capitalization,
+            [
+                (
+                    dataset["Original Title"] + " " + dataset["Original Description"]
+                ).to_numpy(copy=False)
+            ],
+        ),
+        "Add Tag Tag Features": (
+            FeatureExtraction.add_tag_tag_features,
+            [
+                (
+                    dataset["Original Title"] + " " + dataset["Original Description"]
+                ).to_numpy(copy=False)
+            ],
+        ),
+        "Mark Tokens Inside Quotes": (
+            FeatureExtraction.mark_tokens_inside_quotes,
+            [
+                (
+                    dataset["Original Title"] + " " + dataset["Original Description"]
+                ).to_numpy(copy=False)
+            ],
+        ),
+        "Mark Tokens Inside Parentheses": (
+            FeatureExtraction.mark_tokens_inside_parentheses,
+            [
+                (
+                    dataset["Original Title"] + " " + dataset["Original Description"]
+                ).to_numpy(copy=False)
+            ],
+        ),
+    }
+
     per_token_features = []
 
-    feature_channel = (
-        TensorMonad((dataset["Text"].values, dataset["Channel Name"].values))
-        .map(FeatureExtraction.tokens_containing_channel_name)
-        .pad(max_sequence_length)
-        .to_tensor()
-    )
-    per_token_features.append(feature_channel)
+    logger.info("Extracting features...")
 
-    feature_token_freq_title = (
-        TensorMonad((dataset["Text"].values, dataset["Original Title"].values))
-        .map(FeatureExtraction.count_token_occurrences)
-        .pad(max_sequence_length)
-        .to_tensor()
-    )
-    per_token_features.append(feature_token_freq_title)
-
-    # feature_token_freq_desc = (
-    #     TensorMonad((dataset["Text"].values, dataset["Original Description"].values))
-    #     .map(FeatureExtraction.count_token_occurrences)
-    #     .pad(max_sequence_length)
-    #     .to_tensor()
-    # )
-    # per_token_features.append(feature_token_freq_desc)
-
-    feature_token_length = (
-        TensorMonad([dataset["Text"].values])
-        .map(FeatureExtraction.length_of_tokens)
-        .pad(max_sequence_length)
-        .to_tensor()
-    )
-    per_token_features.append(feature_token_length)
-
-    # feature_is_token_verbal = (
-    #     TensorMonad([dataset["Text"].values])
-    #     .map(FeatureExtraction.is_token_verbal)
-    #     .pad(max_sequence_length)
-    #     .to_tensor()
-    # )
-    # per_token_features.append(feature_is_token_verbal)
-
-    # feature_token_in_hashtags = (
-    #     TensorMonad((dataset["Text"].values, dataset["Original Description"].values))
-    #     .map(FeatureExtraction.token_appears_in_hashtags)
-    #     .pad(max_sequence_length)
-    #     .to_tensor()
-    # )
-    # per_token_features.append(feature_token_in_hashtags)
-
-    # feature_token_in_links = (
-    #     TensorMonad((dataset["Text"].values, dataset["Original Description"].values))
-    #     .map(FeatureExtraction.token_appears_in_links)
-    #     .pad(max_sequence_length)
-    #     .to_tensor()
-    # )
-    # per_token_features.append(feature_token_in_links)
-
-    # feature_mark_title_tokens = (
-    #     TensorMonad((dataset["Text"].values, dataset["Title"].values))
-    #     .map(FeatureExtraction.mark_title_tokens)
-    #     .pad(max_sequence_length)
-    #     .to_tensor()
-    # )
-    # per_token_features.append(feature_mark_title_tokens)
-
-    pos_title_features = (
-        TensorMonad([dataset["Original Title"] + " " + dataset["Original Description"]])
-        .map(FeatureExtraction.add_pos_tag_features)
-        .pad(max_sequence_length)
-        .to_tensor()
-    )
-    per_token_features.append(pos_title_features)
-
-    # feature_token_distance = (
-    #     TensorMonad([dataset["Text"].values])
-    #     .map(FeatureExtraction.token_distance_from_start)
-    #     .pad(max_sequence_length)
-    #     .to_tensor()
-    # )
-    # per_token_features.append(feature_token_distance)
-
-    feature_token_capitalization = (
-        TensorMonad([dataset["Original Title"] + " " + dataset["Original Description"]])
-        .map(FeatureExtraction.token_capitalization)
-        .pad(max_sequence_length)
-        .to_tensor()
-    )
-    per_token_features.append(feature_token_capitalization)
-
-    feature_tag_tags = (
-        TensorMonad([dataset["Original Title"] + " " + dataset["Original Description"]])
-        .map(FeatureExtraction.add_tag_tag_features)
-        .pad(max_sequence_length)
-        .to_tensor()
-    )
-    per_token_features.append(feature_tag_tags)
+    for feature_name, (function, args) in per_token_feature_functions.items():
+        feature = TensorMonad(args).map(function).pad(max_sequence_length).to_tensor()
+        logger.debug(f"Extracted feature: {feature_name} with shape {feature.shape}")
+        per_token_features.append(feature)
 
     global_features = []
     feature_language = (
