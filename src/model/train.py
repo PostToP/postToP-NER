@@ -1,9 +1,7 @@
-import copy
 from typing import Tuple
 
 import numpy as np
 import torch
-import torch.nn.functional as F
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, Dataset
 
@@ -63,7 +61,9 @@ def set_seed(seed: int):
     torch.backends.cudnn.benchmark = False
 
 
-def run_with_seed(seed: int):
+def run_with_seed(seed: int = None, verbose: bool = True) -> float:
+    if seed is None:
+        seed = np.random.randint(0, 10000)
     set_seed(seed)
     device = torch.device("cuda")
 
@@ -74,11 +74,12 @@ def run_with_seed(seed: int):
         "dataset/p5_dataset_val.npz"
     )
 
-    print("Dataset stats:")
-    print(f"Train samples: {len(train_titles)} | Val samples: {len(val_titles)}")
-    print(
-        f"Sequence length: {train_titles.shape[1]} | Token feature dim: {train_token_feats.shape[2]} | Global feature dim: {train_global_feats.shape[1]}"
-    )
+    if verbose:
+        print("Dataset stats:")
+        print(f"Train samples: {len(train_titles)} | Val samples: {len(val_titles)}")
+        print(
+            f"Sequence length: {train_titles.shape[1]} | Token feature dim: {train_token_feats.shape[2]} | Global feature dim: {train_global_feats.shape[1]}"
+        )
 
     train_dataset = NERDataset(
         train_titles, train_token_feats, train_global_feats, train_labels
@@ -161,9 +162,10 @@ def run_with_seed(seed: int):
         val_metrics = evaluate_model(model, val_loader, device)
         scheduler.step(val_metrics["f1_micro"])
 
-        print(
-            f"Epoch {epoch:04d} | train_loss {train_loss:.4f} | val_loss {val_metrics['loss']:.4f} | val_f1 {val_metrics['f1_micro']:.4f} | val_acc {val_metrics['accuracy']:.4f}"
-        )
+        if verbose:
+            print(
+                f"Epoch {epoch:04d} | train_loss {train_loss:.4f} | val_loss {val_metrics['loss']:.4f} | val_f1 {val_metrics['f1_micro']:.4f} | val_acc {val_metrics['accuracy']:.4f}"
+            )
 
         if val_metrics["f1_micro"] > best_f1:
             best_f1 = val_metrics["f1_micro"]
@@ -174,7 +176,8 @@ def run_with_seed(seed: int):
         else:
             patience_counter += 1
             if patience_counter >= patience:
-                print("Early stopping triggered.")
+                if verbose:
+                    print("Early stopping triggered.")
                 break
 
     if best_state is not None:
@@ -191,19 +194,21 @@ def run_with_seed(seed: int):
     )
 
     final_metrics = evaluate_model(model, val_loader, device)
+    # if verbose:
     print("Final validation metrics:", final_metrics)
 
     return final_metrics["f1_macro"]
 
 
 def main() -> None:
-    SEEDS = [123]
+    SEEDS = [42, 123, 2024, 9999, 0]
     f1_macros = []
     for seed in SEEDS:
         print(f"Running training with seed {seed}...")
-        f1_macro = run_with_seed(seed)
+        f1_macro = run_with_seed(seed=seed, verbose=False)
         f1_macros.append(f1_macro)
         print(f"Seed {seed} | F1 Macro: {f1_macro:.4f}")
 
     avg_f1_macro = sum(f1_macros) / len(f1_macros)
     print(f"Average F1 Macro over seeds: {avg_f1_macro:.4f}")
+    print(f"F1 Macro Std Dev: {np.std(f1_macros):.4f}")
