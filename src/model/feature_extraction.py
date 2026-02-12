@@ -381,8 +381,18 @@ def mask_artists_and_titles(
 
 
 def concat_dataset(dataset):
-    dataset["Text"] = dataset["Title"] + dataset["Description"]
-    dataset["NER"] = dataset["Title NER"] + dataset["Description NER"]
+    dataset["Text"] = dataset.apply(
+        lambda row: ["<cls>"]
+        + row["Title"]
+        + ["<sep>"]
+        + row["Description"]
+        + ["<end>"],
+        axis=1,
+    )
+    dataset["NER"] = dataset.apply(
+        lambda row: ["O"] + row["Title NER"] + ["O"] + row["Description NER"] + ["O"],
+        axis=1,
+    )
 
     return dataset
 

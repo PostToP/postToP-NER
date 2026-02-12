@@ -28,6 +28,9 @@ class VectorizerKerasTokenizer:
         self.counter = Counter()
         self.vocab = {
             "<oov>": 1,
+            "<cls>": 2,
+            "<sep>": 3,
+            "<end>": 4,
         }
         self.vocab_size = vocab_size - len(self.vocab)
 
