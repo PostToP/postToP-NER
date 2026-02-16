@@ -80,7 +80,7 @@ def fix_dataset_NER(dataset):
         ner_elements = dataset.loc[
             idx, "NER"
         ]  # {end, type, start,source, selectedText}[]
-        dataset.loc[idx, "NER"] = []
+        fixed_ner = []
         for element in ner_elements:
             tag = element["type"]
             source = (
@@ -95,7 +95,8 @@ def fix_dataset_NER(dataset):
                 "entry": element["selectedText"],
                 "type": tag,
             }
-            dataset.loc[idx, "NER"].append(added)
+            fixed_ner.append(added)
+        dataset.at[idx, "NER"] = fixed_ner
     return dataset
 
 
