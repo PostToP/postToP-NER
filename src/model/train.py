@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader, Dataset
 from transformers import get_linear_schedule_with_warmup
 
 from config.config import DEVICE, TABLE, TABLE_BACK
+from model.EarlyStopping import EarlyStopping
 from model.model import TransformerModel, evaluate_model
 from torch.amp import autocast, GradScaler
 
@@ -68,7 +69,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     g = torch.Generator()
     g.manual_seed(seed)
 
-    BATCH_SIZE = 32
+    BATCH_SIZE = 64
 
     train_loader = DataLoader(
         train_dataset,
@@ -92,7 +93,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     model = TransformerModel(num_labels=len(TABLE_BACK)).to(DEVICE)
 
     LR = 3e-5
-    EPOCHS = 20
+    EPOCHS = 40
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=0, num_training_steps=len(train_loader) * EPOCHS
@@ -100,11 +101,9 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     criterion = torch.nn.CrossEntropyLoss(ignore_index=-100)
     scaler = GradScaler()
 
-    best_f1 = -float("inf")
+    early_stopping = EarlyStopping(patience=3, min_delta=0.000)
+
     best_state = None
-    patience = 3
-    delta = 0.000
-    patience_counter = 0
 
     for epoch in range(1, EPOCHS + 1):
         model.train()
@@ -137,18 +136,12 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
                 f"Epoch {epoch:04d} | train_loss {train_loss:.4f} | val_loss {val_metrics['loss']:.4f} | val_f1_micro {val_metrics['f1_micro']:.4f} | val_f1_macro {val_metrics['f1_macro']:.4f} | val_acc {val_metrics['accuracy']:.4f}"
             )
 
-        if val_metrics["f1_micro"] > best_f1:
-            best_f1 = val_metrics["f1_micro"]
+        if val_metrics["f1_micro"] > early_stopping.best_score:
             best_state = {k: v.cpu() for k, v in model.state_dict().items()}
-            patience_counter = 0
-        elif val_metrics["f1_micro"] > best_f1 - delta:
-            patience_counter = 0
-        else:
-            patience_counter += 1
-            if patience_counter >= patience:
-                if verbose:
-                    print("Early stopping triggered.")
-                break
+        if early_stopping(val_metrics["f1_micro"]):
+            if verbose:
+                print("Early stopping triggered.")
+            break
 
     if best_state is not None:
         model.load_state_dict(best_state)
@@ -169,7 +162,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
 
 
 def main() -> None:
-    SEEDS = [42]
+    SEEDS = [42, 123, 2024, 7, 999]
     f1_macros = []
     for seed in SEEDS:
         print(f"Running training with seed {seed}...")
