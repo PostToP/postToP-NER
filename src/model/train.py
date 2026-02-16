@@ -139,9 +139,9 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
                 f"Epoch {epoch:04d} | train_loss {train_loss:.4f} | val_loss {val_metrics['loss']:.4f} | val_f1_micro {val_metrics['f1_micro']:.4f} | val_f1_macro {val_metrics['f1_macro']:.4f} | val_acc {val_metrics['accuracy']:.4f}"
             )
 
-        if val_metrics["f1_micro"] > early_stopping.best_score:
+        if val_metrics["f1_macro"] > early_stopping.best_score:
             best_state = {k: v.cpu() for k, v in model.state_dict().items()}
-        if early_stopping(val_metrics["f1_micro"]):
+        if early_stopping(val_metrics["f1_macro"]):
             if verbose:
                 print("Early stopping triggered.")
             break
