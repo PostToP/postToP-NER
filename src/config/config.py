@@ -1,3 +1,6 @@
+import torch
+
+
 TABLE = {
     "O": 0,
     "ORIGINAL_AUTHOR": 1,
@@ -12,6 +15,11 @@ TABLE = {
 }
 TABLE_BACK = {v: k for k, v in TABLE.items()}
 
+NUM_LABELS = len(TABLE)
 
-MAX_SEQUENCE_LENGTH = 100
-VOCAB_SIZE = 15000
+MAX_SEQUENCE_LENGTH = 512
+
+TRANSFORMER_MODEL_NAME = "bert-base-multilingual-cased"
+
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

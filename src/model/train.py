@@ -1,47 +1,33 @@
-from typing import Tuple
-
 import numpy as np
+import pandas as pd
 import torch
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, Dataset
+from transformers import get_linear_schedule_with_warmup
 
-from config.config import TABLE_BACK
-from model.model import build_model, evaluate_model
+from config.config import DEVICE, TABLE, TABLE_BACK
+from model.model import TransformerModel, evaluate_model
+from torch.amp import autocast, GradScaler
 
 
 class NERDataset(Dataset):
-    def __init__(
-        self,
-        titles: np.ndarray,
-        token_features: np.ndarray,
-        global_features: np.ndarray,
-        labels: np.ndarray,
-    ) -> None:
-        self.titles = titles.astype(np.int64)
-        self.token_features = token_features.astype(np.float32)
-        self.global_features = global_features.astype(np.float32)
-        self.labels = labels.astype(np.int64)
+    def __init__(self, df):
+        self.input_ids = [
+            torch.tensor(x, dtype=torch.long) for x in df["Word IDs"].values
+        ]
+        self.attention_masks = [
+            torch.tensor(x, dtype=torch.long) for x in df["Attention Mask"].values
+        ]
+        self.labels = [torch.tensor(x, dtype=torch.long) for x in df["NER"].values]
 
-    def __len__(self) -> int:
-        return len(self.titles)
+    def __len__(self):
+        return len(self.input_ids)
 
-    def __getitem__(self, idx: int):
-        return (
-            torch.from_numpy(self.titles[idx]),
-            torch.from_numpy(self.token_features[idx]),
-            torch.from_numpy(self.global_features[idx]),
-            torch.from_numpy(self.labels[idx]),
-        )
-
-
-def load_split(path: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    data = np.load(path, allow_pickle=True)
-    return (
-        data["titles"],
-        data["token_features"],
-        data["global_features"],
-        data["ner_tags"],
-    )
+    def __getitem__(self, idx):
+        return {
+            "input_ids": self.input_ids[idx],
+            "attention_mask": self.attention_masks[idx],
+            "labels": self.labels[idx],
+        }
 
 
 def set_seed(seed: int):
@@ -65,33 +51,28 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     if seed is None:
         seed = np.random.randint(0, 10000)
     set_seed(seed)
-    device = torch.device("cuda")
 
-    train_titles, train_token_feats, train_global_feats, train_labels = load_split(
-        "dataset/p5_dataset_train.npz"
-    )
-    val_titles, val_token_feats, val_global_feats, val_labels = load_split(
-        "dataset/p5_dataset_val.npz"
-    )
+    train_df = pd.read_json("dataset/p4_dataset_train.json")
+    val_df = pd.read_json("dataset/p4_dataset_val.json")
+
+    train_dataset = NERDataset(train_df)
+    val_dataset = NERDataset(val_df)
 
     if verbose:
         print("Dataset stats:")
-        print(f"Train samples: {len(train_titles)} | Val samples: {len(val_titles)}")
+        print(f"Train samples: {len(train_df)} | Val samples: {len(val_df)}")
         print(
-            f"Sequence length: {train_titles.shape[1]} | Token feature dim: {train_token_feats.shape[2]} | Global feature dim: {train_global_feats.shape[1]}"
+            f"Sequence length: {train_dataset.input_ids[0].shape[0]} | Token feature dim: {0} | Global feature dim: {0}"
         )
-
-    train_dataset = NERDataset(
-        train_titles, train_token_feats, train_global_feats, train_labels
-    )
-    val_dataset = NERDataset(val_titles, val_token_feats, val_global_feats, val_labels)
 
     g = torch.Generator()
     g.manual_seed(seed)
 
+    BATCH_SIZE = 32
+
     train_loader = DataLoader(
         train_dataset,
-        batch_size=1024,
+        batch_size=BATCH_SIZE,
         shuffle=True,
         num_workers=0,
         pin_memory=False,
@@ -100,7 +81,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     )
     val_loader = DataLoader(
         val_dataset,
-        batch_size=1024,
+        batch_size=BATCH_SIZE,
         shuffle=False,
         num_workers=0,
         pin_memory=False,
@@ -108,63 +89,52 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
         generator=g,
     )
 
-    token_feature_dim = train_token_feats.shape[2]
-    global_feature_dim = train_global_feats.shape[1]
-    model = build_model(token_feature_dim, global_feature_dim).to(device)
+    model = TransformerModel(num_labels=len(TABLE_BACK)).to(DEVICE)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
-    scheduler = ReduceLROnPlateau(
-        optimizer,
-        mode="max",
-        factor=0.5,
-        patience=10,
-        min_lr=1e-6,
+    LR = 3e-5
+    EPOCHS = 20
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
+    scheduler = get_linear_schedule_with_warmup(
+        optimizer, num_warmup_steps=0, num_training_steps=len(train_loader) * EPOCHS
     )
-    criterion = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.CrossEntropyLoss(ignore_index=-100)
+    scaler = GradScaler()
 
     best_f1 = -float("inf")
     best_state = None
-    patience = 100
+    patience = 3
     delta = 0.000
     patience_counter = 0
-    max_epochs = 5000
 
-    for epoch in range(1, max_epochs + 1):
+    for epoch in range(1, EPOCHS + 1):
         model.train()
-        token_loss_sum = 0.0
-        token_count = 0
+        total_loss = 0.0
 
-        for tokens, token_features, global_features, labels in train_loader:
-            tokens = tokens.to(device)
-            token_features = token_features.to(device)
-            global_features = global_features.to(device)
-            labels = labels.to(device)
-
+        for batch in train_loader:
+            input_ids = batch["input_ids"].to(DEVICE)
+            attention_mask = batch["attention_mask"].to(DEVICE)
+            labels = batch["labels"].to(DEVICE)
             optimizer.zero_grad()
 
-            logits = model(tokens, token_features, global_features)
-            mask = tokens != 0
-            if not mask.any():
-                continue
+            with autocast("cuda"):
+                logits = model(input_ids, attention_mask)
+                loss = criterion(logits.view(-1, len(TABLE)), labels.view(-1))
 
-            valid_logits = logits[mask]
-            valid_labels = labels[mask]
-            loss = criterion(valid_logits, valid_labels)
-
-            loss.backward()
+            scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
+            scaler.step(optimizer)
+            scaler.update()
 
-            token_loss_sum += loss.item() * valid_labels.numel()
-            token_count += valid_labels.numel()
+            total_loss += loss.item()
 
-        train_loss = token_loss_sum / token_count if token_count > 0 else 0.0
-        val_metrics = evaluate_model(model, val_loader, device)
-        scheduler.step(val_metrics["f1_micro"])
+        train_loss = total_loss / len(train_loader)
+        val_metrics = evaluate_model(model, val_loader)
+        scheduler.step()
 
         if verbose:
             print(
-                f"Epoch {epoch:04d} | train_loss {train_loss:.4f} | val_loss {val_metrics['loss']:.4f} | val_f1 {val_metrics['f1_micro']:.4f} | val_acc {val_metrics['accuracy']:.4f}"
+                f"Epoch {epoch:04d} | train_loss {train_loss:.4f} | val_loss {val_metrics['loss']:.4f} | val_f1_micro {val_metrics['f1_micro']:.4f} | val_f1_macro {val_metrics['f1_macro']:.4f} | val_acc {val_metrics['accuracy']:.4f}"
             )
 
         if val_metrics["f1_micro"] > best_f1:
@@ -186,26 +156,24 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     torch.save(
         {
             "state_dict": model.state_dict(),
-            "token_feature_dim": token_feature_dim,
-            "global_feature_dim": global_feature_dim,
             "num_labels": len(TABLE_BACK),
         },
         "model/final_model.pth",
     )
 
-    final_metrics = evaluate_model(model, val_loader, device)
-    # if verbose:
-    print("Final validation metrics:", final_metrics)
+    final_metrics = evaluate_model(model, val_loader)
+    if verbose:
+        print("Final validation metrics:", final_metrics)
 
     return final_metrics["f1_macro"]
 
 
 def main() -> None:
-    SEEDS = [42, 123, 2024, 9999, 0]
+    SEEDS = [42]
     f1_macros = []
     for seed in SEEDS:
         print(f"Running training with seed {seed}...")
-        f1_macro = run_with_seed(seed=seed, verbose=False)
+        f1_macro = run_with_seed(seed=seed, verbose=True)
         f1_macros.append(f1_macro)
         print(f"Seed {seed} | F1 Macro: {f1_macro:.4f}")
 
