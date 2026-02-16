@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
 from transformers import get_linear_schedule_with_warmup
 
 from config.config import DEVICE, TABLE, TABLE_BACK
@@ -109,7 +110,8 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
         model.train()
         total_loss = 0.0
 
-        for batch in train_loader:
+        progress_bar = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{EPOCHS}")
+        for batch in progress_bar:
             input_ids = batch["input_ids"].to(DEVICE)
             attention_mask = batch["attention_mask"].to(DEVICE)
             labels = batch["labels"].to(DEVICE)
@@ -126,6 +128,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
             scaler.update()
 
             total_loss += loss.item()
+            progress_bar.set_postfix({"loss": total_loss / (progress_bar.n + 1)})
 
         train_loss = total_loss / len(train_loader)
         val_metrics = evaluate_model(model, val_loader)
