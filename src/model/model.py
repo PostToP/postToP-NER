@@ -1,5 +1,6 @@
 from typing import Dict, List
 
+import numpy as np
 import torch
 from sklearn.metrics import f1_score
 from torch import nn
@@ -15,10 +16,13 @@ class TransformerModel(nn.Module):
         self.dropout = nn.Dropout(0.1)
         self.classifier = nn.Linear(self.bert.config.hidden_size, num_labels)
 
-    def forward(self, input_ids, attention_mask):
+    def forward(self, input_ids, attention_mask, features):
         outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
         sequence_output = outputs.last_hidden_state
-        sequence_output = self.dropout(sequence_output)
+
+        concatenated_output = torch.cat((sequence_output, features), dim=-1)
+
+        sequence_output = self.dropout(concatenated_output)
         logits = self.classifier(sequence_output)
         return logits
 
@@ -79,9 +83,10 @@ def evaluate_model(
         for batch in val_loader:
             input_ids = batch["input_ids"].to(DEVICE)
             attention_mask = batch["attention_mask"].to(DEVICE)
+            features = batch["features"].to(DEVICE)
             labels = batch["labels"].to(DEVICE)
 
-            logits = model(input_ids, attention_mask)
+            logits = model(input_ids, attention_mask, features)
 
             loss_sum += criterion(logits.view(-1, NUM_LABELS), labels.view(-1))
 

@@ -51,6 +51,7 @@ def do_stuff(df):
     df["Attention Mask"] = encodings.apply(
         lambda x: x["attention_mask"].squeeze(0).tolist()
     )
+    df["real_word_ids"] = encodings.apply(lambda x: x.word_ids(batch_index=0))
     df["NER"] = df.apply(
         lambda row: convert_ner_tags(encodings[row.name], row["NER"]), axis=1
     )

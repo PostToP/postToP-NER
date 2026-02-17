@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 import re
-from config.config import MAX_SEQUENCE_LENGTH, VOCAB_SIZE
+from config.config import MAX_SEQUENCE_LENGTH
 from tokenizer.TokenizerCustom import TokenizerCustom
 from vectorizer.VectorizerKerasTokenizer import VectorizerKerasTokenizer
 from vectorizer.VectorizerNER import VectorizerNER
@@ -247,7 +247,7 @@ def extract_features(
             FeatureExtraction.count_token_occurrences,
             (
                 dataset["Text"].to_numpy(copy=False),
-                dataset["Original Title"].to_numpy(copy=False),
+                dataset["Title"].to_numpy(copy=False),
             ),
         ),
         # "Token Frequency in Description": (
@@ -257,10 +257,10 @@ def extract_features(
         #         dataset["Original Description"].to_numpy(copy=False),
         #     ),
         # ),
-        "Length of Token": (
-            FeatureExtraction.length_of_tokens,
-            (dataset["Text"].to_numpy(copy=False),),
-        ),
+        # "Length of Token": (
+        #     FeatureExtraction.length_of_tokens,
+        #     (dataset["Text"].to_numpy(copy=False),),
+        # ),
         # "Is Token Verbal": (
         #     FeatureExtraction.is_token_verbal,
         #     (dataset["Text"].to_numpy(copy=False),),
@@ -286,49 +286,29 @@ def extract_features(
         #         dataset["Original Title"].to_numpy(copy=False),
         #     ),
         # ),
-        "Add POS Tag Features": (
-            FeatureExtraction.add_pos_tag_features,
-            [
-                (
-                    dataset["Original Title"] + " " + dataset["Original Description"]
-                ).to_numpy(copy=False)
-            ],
-        ),
+        # "Add POS Tag Features": (
+        #     FeatureExtraction.add_pos_tag_features,
+        #     [(dataset["Title"] + " " + dataset["Description"]).to_numpy(copy=False)],
+        # ),
         # "Token Distance from Start": (
         #     FeatureExtraction.token_distance_from_start,
         #     (dataset["Text"].to_numpy(copy=False),),
         # ),
-        "Token Capitalization": (
-            FeatureExtraction.token_capitalization,
-            [
-                (
-                    dataset["Original Title"] + " " + dataset["Original Description"]
-                ).to_numpy(copy=False)
-            ],
-        ),
-        "Add Tag Tag Features": (
-            FeatureExtraction.add_tag_tag_features,
-            [
-                (
-                    dataset["Original Title"] + " " + dataset["Original Description"]
-                ).to_numpy(copy=False)
-            ],
-        ),
+        # "Token Capitalization": (
+        #     FeatureExtraction.token_capitalization,
+        #     [(dataset["Title"] + " " + dataset["Description"]).to_numpy(copy=False)],
+        # ),
+        # "Add Tag Tag Features": (
+        #     FeatureExtraction.add_tag_tag_features,
+        #     [(dataset["Title"] + " " + dataset["Description"]).to_numpy(copy=False)],
+        # ),
         "Mark Tokens Inside Quotes": (
             FeatureExtraction.mark_tokens_inside_quotes,
-            [
-                (
-                    dataset["Original Title"] + " " + dataset["Original Description"]
-                ).to_numpy(copy=False)
-            ],
+            [(dataset["Title"] + " " + dataset["Description"]).to_numpy(copy=False)],
         ),
         "Mark Tokens Inside Parentheses": (
             FeatureExtraction.mark_tokens_inside_parentheses,
-            [
-                (
-                    dataset["Original Title"] + " " + dataset["Original Description"]
-                ).to_numpy(copy=False)
-            ],
+            [(dataset["Title"] + " " + dataset["Description"]).to_numpy(copy=False)],
         ),
     }
 
@@ -349,6 +329,9 @@ def extract_features(
 
     per_token_features = np.concatenate(per_token_features, axis=2)
     global_features = np.concatenate(global_features, axis=1)
+
+    per_token_features = np.zeros((len(dataset), max_sequence_length, 0), dtype=int)
+    global_features = np.zeros((len(dataset), 0), dtype=int)
 
     return per_token_features, global_features
 
@@ -380,40 +363,45 @@ def mask_artists_and_titles(
     return new_tokens
 
 
-def concat_dataset(dataset):
-    dataset["Text"] = dataset.apply(
-        lambda row: ["<cls>"]
-        + row["Title"]
-        + ["<sep>"]
-        + row["Description"]
-        + ["<end>"],
-        axis=1,
-    )
-    dataset["NER"] = dataset.apply(
-        lambda row: ["O"] + row["Title NER"] + ["O"] + row["Description NER"] + ["O"],
-        axis=1,
-    )
-
-    return dataset
-
-
-def do_stuff(df, ner_vectorizer, title_vectorizer, train=False):
-    df = concat_dataset(df)
-
-    if train:
-        df["Text"] = mask_artists_and_titles(df["Text"].values, df["NER"].values)
-        ner_vectorizer.train(df["NER"].values)
-    df["NER"] = df["NER"].apply(lambda x: ner_vectorizer.encode(x))
-
+def do_stuff(df):
+    tokenizer = TokenizerCustom()
+    df["Text"] = df["Title"].apply(lambda x: tokenizer.encode(x)) + df[
+        "Description"
+    ].apply(lambda x: tokenizer.encode(x))
     per_token_features, global_features = extract_features(df, MAX_SEQUENCE_LENGTH)
+
+    # # apply alignment to per token features
+    # aligned_per_token_features = []
+    # for i in range(per_token_features.shape[0]):
+    #     aligned_features = []
+    #     for j in range(per_token_features.shape[2]):
+    #         aligned_feature = align_features(
+    #             df["real_word_ids"].iloc[i], per_token_features[i, :, j]
+    #         )
+    #         aligned_features.append(aligned_feature)
+    #     aligned_per_token_features.append(np.stack(aligned_features, axis=1))
+
+    # df["Features"] = aligned_per_token_features
     df["Features"] = per_token_features.tolist()
+
     df["Global Features"] = global_features.tolist()
 
-    if train:
-        title_vectorizer.train(df["Text"].values)
-    df["title_vec"] = df["Text"].apply(lambda x: title_vectorizer.encode(x)).to_numpy()
-
     return df
+
+
+def align_features(word_ids, feature):
+    aligned_features = np.zeros_like(feature)
+    previous_word_id = None
+    for i in range(len(word_ids)):
+        word_id = word_ids[i]
+        if word_id is None:
+            aligned_features[i] = 0
+        elif word_id != previous_word_id:
+            aligned_features[i] = feature[word_id]
+        else:
+            aligned_features[i] = feature[word_id]
+        previous_word_id = word_id
+    return aligned_features
 
 
 def save_split(path, X, y):
@@ -432,15 +420,9 @@ import joblib
 def feature_extraction():
     train_df = pd.read_json("dataset/p4_dataset_train.json")
     val_df = pd.read_json("dataset/p4_dataset_val.json")
-    ner_vectorizer = VectorizerNER(MAX_SEQUENCE_LENGTH)
-    title_vectorizer = VectorizerKerasTokenizer(VOCAB_SIZE, MAX_SEQUENCE_LENGTH)
 
-    train_df = do_stuff(train_df, ner_vectorizer, title_vectorizer, train=True)
-    val_df = do_stuff(val_df, ner_vectorizer, title_vectorizer, train=False)
+    train_df = do_stuff(train_df)
+    val_df = do_stuff(val_df)
 
-    joblib.dump(title_vectorizer, "model/title_vectorizer.pkl")
-
-    train_ner = np.array(list(train_df["NER"].values))
-    val_ner = np.array(list(val_df["NER"].values))
-    save_split("dataset/p5_dataset_train.npz", train_df, train_ner)
-    save_split("dataset/p5_dataset_val.npz", val_df, val_ner)
+    train_df.to_json("dataset/p5_dataset_train.json", index=False)
+    val_df.to_json("dataset/p5_dataset_val.json", index=False)

@@ -60,8 +60,8 @@ def preprocess_dataset():
         lambda row: offset_ner_tags(row["NER"], len(row["Title"]) + 7), axis=1
     )
 
-    train_df = train_df.drop(columns=["Title", "Description"])
-    val_df = val_df.drop(columns=["Title", "Description"])
+    # train_df = train_df.drop(columns=["Title", "Description"])
+    # val_df = val_df.drop(columns=["Title", "Description"])
 
     train_df.to_json("dataset/p3_dataset_train.json", index=False)
     val_df.to_json("dataset/p3_dataset_val.json", index=False)

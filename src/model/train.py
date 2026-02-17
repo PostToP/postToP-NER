@@ -19,6 +19,9 @@ class NERDataset(Dataset):
         self.attention_masks = [
             torch.tensor(x, dtype=torch.long) for x in df["Attention Mask"].values
         ]
+        self.features = [
+            torch.tensor(x, dtype=torch.float) for x in df["Features"].values
+        ]
         self.labels = [torch.tensor(x, dtype=torch.long) for x in df["NER"].values]
 
     def __len__(self):
@@ -28,6 +31,7 @@ class NERDataset(Dataset):
         return {
             "input_ids": self.input_ids[idx],
             "attention_mask": self.attention_masks[idx],
+            "features": self.features[idx],
             "labels": self.labels[idx],
         }
 
@@ -54,8 +58,8 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
         seed = np.random.randint(0, 10000)
     set_seed(seed)
 
-    train_df = pd.read_json("dataset/p4_dataset_train.json")
-    val_df = pd.read_json("dataset/p4_dataset_val.json")
+    train_df = pd.read_json("dataset/p5_dataset_train.json")
+    val_df = pd.read_json("dataset/p5_dataset_val.json")
 
     train_dataset = NERDataset(train_df)
     val_dataset = NERDataset(val_df)
@@ -70,7 +74,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     g = torch.Generator()
     g.manual_seed(seed)
 
-    BATCH_SIZE = 64
+    BATCH_SIZE = 32
 
     train_loader = DataLoader(
         train_dataset,
@@ -114,11 +118,12 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
         for batch in progress_bar:
             input_ids = batch["input_ids"].to(DEVICE)
             attention_mask = batch["attention_mask"].to(DEVICE)
+            features = batch["features"].to(DEVICE)
             labels = batch["labels"].to(DEVICE)
             optimizer.zero_grad()
 
             with autocast("cuda"):
-                logits = model(input_ids, attention_mask)
+                logits = model(input_ids, attention_mask, features)
                 loss = criterion(logits.view(-1, len(TABLE)), labels.view(-1))
 
             scaler.scale(loss).backward()
