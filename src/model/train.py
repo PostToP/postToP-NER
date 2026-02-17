@@ -9,6 +9,7 @@ from config.config import DEVICE, TABLE, TABLE_BACK
 from model.EarlyStopping import EarlyStopping
 from model.model import TransformerModel, evaluate_model
 from torch.amp import autocast, GradScaler
+from torch.nn.utils.rnn import pad_sequence
 
 
 class NERDataset(Dataset):
@@ -53,12 +54,34 @@ def set_seed(seed: int):
     torch.backends.cudnn.benchmark = False
 
 
+def collate_fn(batch):
+    input_ids = [item["input_ids"] for item in batch]
+    attention_mask = [item["attention_mask"] for item in batch]
+    features = [item["features"] for item in batch]
+    labels = [item["labels"] for item in batch]
+
+    input_ids = pad_sequence(input_ids, batch_first=True, padding_value=0)
+    attention_mask = pad_sequence(attention_mask, batch_first=True, padding_value=0)
+    labels = pad_sequence(labels, batch_first=True, padding_value=-100)
+    features = pad_sequence(features, batch_first=True, padding_value=0.0)
+
+    return {
+        "input_ids": input_ids,
+        "attention_mask": attention_mask,
+        "features": features,
+        "labels": labels,
+    }
+
+
 def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     if seed is None:
         seed = np.random.randint(0, 10000)
     set_seed(seed)
 
     train_df = pd.read_json("dataset/p5_dataset_train.json")
+    train_df = train_df.sample(frac=1).sort_values(
+        by="Word IDs", key=lambda x: x.str.len()
+    )
     val_df = pd.read_json("dataset/p5_dataset_val.json")
 
     train_dataset = NERDataset(train_df)
@@ -83,6 +106,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
         num_workers=0,
         pin_memory=False,
         worker_init_fn=lambda worker_id: np.random.seed(seed + worker_id),
+        collate_fn=collate_fn,
         generator=g,
     )
     val_loader = DataLoader(
@@ -91,6 +115,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
         shuffle=False,
         num_workers=0,
         pin_memory=False,
+        collate_fn=collate_fn,
         worker_init_fn=lambda worker_id: np.random.seed(seed + worker_id),
         generator=g,
     )

@@ -40,7 +40,7 @@ def convert_ner_tags(encoding, ner_dict: list[dict]):
 
 
 def do_stuff(df):
-    text_tokenizer = TransformerTokenizer(TRANSFORMER_MODEL_NAME, MAX_SEQUENCE_LENGTH)
+    text_tokenizer = TransformerTokenizer(TRANSFORMER_MODEL_NAME)
     encodings = df["Text"].apply(lambda x: text_tokenizer.encode(x))
     df["Word IDs"] = encodings.apply(lambda x: x["input_ids"].squeeze(0).tolist())
     df["Tokens"] = encodings.apply(
