@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+
+load_dotenv()
 import sys
 
 import log
@@ -39,14 +42,21 @@ def run_tokenize() -> None:
     tokenize_dataset()
 
 
+def run_compile() -> None:
+    from model.compile import compile_model
+
+    compile_model()
+
+
 def main() -> None:
     COMMANDS = {
         "fetch": run_fetch,
         "split": run_split,
-        "tokenize": run_tokenize,
         "preprocess": run_preprocess,
+        "tokenize": run_tokenize,
         "feature": run_feature_extraction,
         "train": run_train,
+        "compile": run_compile,
     }
 
     if len(sys.argv) < 2:
