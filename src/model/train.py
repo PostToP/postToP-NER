@@ -5,11 +5,13 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 from transformers import get_linear_schedule_with_warmup
 
-from config.config import DEVICE, TABLE, TABLE_BACK
+from config.config import TABLE, TABLE_BACK
 from model.EarlyStopping import EarlyStopping
 from model.model import TransformerModel, evaluate_model
 from torch.amp import autocast, GradScaler
 from torch.nn.utils.rnn import pad_sequence
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class NERDataset(Dataset):

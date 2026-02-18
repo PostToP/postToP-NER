@@ -4,9 +4,11 @@ import numpy as np
 import torch
 from sklearn.metrics import f1_score
 from torch import nn
-from config.config import DEVICE, NUM_LABELS, TABLE_BACK, TRANSFORMER_MODEL_NAME
+from config.config import NUM_LABELS, TABLE_BACK, TRANSFORMER_MODEL_NAME
 
 from transformers import AutoModel
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class TransformerModel(nn.Module):

@@ -1,6 +1,3 @@
-import torch
-
-
 TABLE = {
     "O": 0,
     "ORIGINAL_AUTHOR": 1,
@@ -21,5 +18,3 @@ MAX_SEQUENCE_LENGTH = 512
 
 TRANSFORMER_MODEL_NAME = "bert-base-multilingual-cased"
 
-
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
