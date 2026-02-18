@@ -175,8 +175,12 @@ cython_debug/
 
 out/
 dataset/
-/model/
-spacy/
+.github/
+.git/
+
+*.tar
 
 .vscode/
-*.tar
+
+Dockerfile
+.dockerignore
