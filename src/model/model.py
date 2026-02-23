@@ -22,9 +22,9 @@ class TransformerModel(nn.Module):
         outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
         sequence_output = outputs.last_hidden_state
 
-        concatenated_output = torch.cat((sequence_output, features), dim=-1)
+        # concatenated_output = torch.cat((sequence_output, features), dim=-1)
 
-        sequence_output = self.dropout(concatenated_output)
+        sequence_output = self.dropout(sequence_output)
         logits = self.classifier(sequence_output)
         return logits
 
