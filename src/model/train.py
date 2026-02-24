@@ -183,29 +183,32 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     if best_state is not None:
         model.load_state_dict(best_state)
 
-    torch.save(
-        {
-            "state_dict": model.state_dict(),
-            "num_labels": len(TABLE_BACK),
-        },
-        "model/final_model.pth",
-    )
-
     final_metrics = evaluate_model(model, val_loader)
     if verbose:
         print("Final validation metrics:", final_metrics)
 
-    return final_metrics["f1_macro"]
+    return final_metrics["f1_macro"], model
 
 
 def main() -> None:
     SEEDS = [42, 123, 2024, 7, 999]
     f1_macros = []
+    best_model = None
     for seed in SEEDS:
         print(f"Running training with seed {seed}...")
-        f1_macro = run_with_seed(seed=seed, verbose=True)
+        f1_macro, model = run_with_seed(seed=seed, verbose=True)
+        if f1_macro > max(f1_macros, default=0):
+            best_model = model
         f1_macros.append(f1_macro)
         print(f"Seed {seed} | F1 Macro: {f1_macro:.4f}")
+
+    torch.save(
+        {
+            "state_dict": best_model.state_dict(),
+            "num_labels": len(TABLE_BACK),
+        },
+        "model/final_model.pth",
+    )
 
     avg_f1_macro = sum(f1_macros) / len(f1_macros)
     print(f"Average F1 Macro over seeds: {avg_f1_macro:.4f}")
