@@ -17,3 +17,4 @@ NUM_LABELS = len(TABLE)
 MAX_SEQUENCE_LENGTH = 512
 
 TRANSFORMER_MODEL_NAME = "distilbert/distilbert-base-multilingual-cased"
+VERSION = "v1.0.0"

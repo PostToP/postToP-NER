@@ -202,7 +202,12 @@ def predict():
         title = data.get("title", "")
         description = data.get("description", "")
         entities, structured_result = extract_entities(title, description)
-        return jsonify({"entities": entities, "result": structured_result})
+        return jsonify(
+            {
+                "prediction": {"entities": entities, "result": structured_result},
+                "version": model_wrapper.version,
+            }
+        )
     except Exception as e:
         print(f"Error: {e}")
         traceback.print_exc()

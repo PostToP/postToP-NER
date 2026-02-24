@@ -5,7 +5,7 @@ import json
 import numpy as np
 import onnxruntime as ort
 from transformers import AutoTokenizer
-from config.config import TRANSFORMER_MODEL_NAME
+from config.config import TRANSFORMER_MODEL_NAME, VERSION
 
 
 class ModelWrapper:
@@ -64,6 +64,7 @@ class ModelWrapper:
 
             config = {
                 "model_name": self.model_name,
+                "version": VERSION,
             }
             config_path = Path(tmpdir) / "config.json"
             with open(config_path, "w") as f:
@@ -82,6 +83,7 @@ class ModelWrapper:
             with open(config_path, "r") as f:
                 config = json.load(f)
             model_name = config["model_name"]
+            version = config.get("version", "unknown")
             model_path = Path(tmpdir) / "model.onnx"
             so = ort.SessionOptions()
             so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
@@ -90,7 +92,10 @@ class ModelWrapper:
                 so,
                 providers=["CPUExecutionProvider"],
             )
-            return ModelWrapper(model=None, session=session)
+            mw = ModelWrapper(model=None, session=session)
+            mw.model_name = model_name
+            mw.version = version
+            return mw
 
     def warmup(self):
         if self.session is not None:
