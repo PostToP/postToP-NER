@@ -76,8 +76,8 @@ def evaluate_model(
     model.eval()
 
     loss_sum = 0.0
-    total_tokens = 0
-    correct_tokens = 0
+    total_tokens = torch.tensor(0, device=DEVICE)
+    correct_tokens = torch.tensor(0, device=DEVICE)
     y_true: List[int] = []
     y_pred: List[int] = []
 
@@ -90,16 +90,22 @@ def evaluate_model(
 
             logits = model(input_ids, attention_mask, features)
 
-            loss_sum += criterion(logits.view(-1, NUM_LABELS), labels.view(-1))
+            loss_sum += criterion(logits.view(-1, NUM_LABELS), labels.view(-1)).detach()
 
             predictions = torch.argmax(logits, dim=-1)
 
-            for pred, label in zip(predictions.cpu().numpy(), labels.cpu().numpy()):
-                mask = label != -100
-                y_pred.extend(pred[mask])
-                y_true.extend(label[mask])
-                correct_tokens += (pred[mask] == label[mask]).sum()
-                total_tokens += mask.sum()
+            mask = labels != -100
+
+            correct_tokens += (predictions[mask] == labels[mask]).sum()
+            total_tokens += mask.sum()
+
+            y_pred.append(predictions[mask].detach())
+            y_true.append(labels[mask].detach())
+
+    correct_tokens = correct_tokens.item()
+    total_tokens = total_tokens.item()
+    y_pred = torch.cat(y_pred).cpu().tolist()
+    y_true = torch.cat(y_true).cpu().tolist()
 
     f1_scores = _compute_f1(y_true, y_pred)
     average_loss = loss_sum / len(val_loader)

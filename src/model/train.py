@@ -12,6 +12,7 @@ from torch.amp import autocast, GradScaler
 from torch.nn.utils.rnn import pad_sequence
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.backends.cudnn.benchmark = True
 
 
 class NERDataset(Dataset):
@@ -99,7 +100,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     g = torch.Generator()
     g.manual_seed(seed)
 
-    BATCH_SIZE = 32
+    BATCH_SIZE = 96
 
     train_loader = DataLoader(
         train_dataset,
@@ -124,8 +125,8 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
 
     model = TransformerModel(num_labels=len(TABLE_BACK)).to(DEVICE)
 
-    LR = 3e-5
-    EPOCHS = 40
+    LR = 1.2e-4
+    EPOCHS = 60
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=0, num_training_steps=len(train_loader) * EPOCHS
@@ -159,10 +160,11 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
             scaler.step(optimizer)
             scaler.update()
 
-            total_loss += loss.item()
-            progress_bar.set_postfix({"loss": total_loss / (progress_bar.n + 1)})
+            total_loss += loss.detach()
+            if progress_bar.n % 20 == 0:
+                progress_bar.set_postfix({"loss": loss.detach()})
 
-        train_loss = total_loss / len(train_loader)
+        train_loss = total_loss.item() / len(train_loader)
         val_metrics = evaluate_model(model, val_loader)
         scheduler.step()
 
@@ -208,3 +210,4 @@ def main() -> None:
     avg_f1_macro = sum(f1_macros) / len(f1_macros)
     print(f"Average F1 Macro over seeds: {avg_f1_macro:.4f}")
     print(f"F1 Macro Std Dev: {np.std(f1_macros):.4f}")
+    print(f"F1 Macro Min: {min(f1_macros):.4f} | F1 Macro Max: {max(f1_macros):.4f}")
