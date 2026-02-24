@@ -113,15 +113,15 @@ def extract_entities(
         )
 
     result = {
-        "original_authors": filter_unique_entities(entities, "ORIGINAL_AUTHOR"),
-        "title": filter_unique_entities(entities, "TITLE"),
-        "featuring": filter_unique_entities(entities, "FEATURING"),
-        "modifier": filter_unique_entities(entities, "MODIFIER"),
-        "vocaloid": filter_unique_entities(entities, "VOCALOID"),
-        "misc_person": filter_unique_entities(entities, "MISC_PERSON"),
-        "performer": filter_unique_entities(entities, "VOCALIST"),
-        "alt_title": filter_unique_entities(entities, "ALT_TITLE"),
-        "album": filter_unique_entities(entities, "ALBUM"),
+        "ORIGINAL_AUTHOR": filter_unique_entities(entities, "ORIGINAL_AUTHOR"),
+        "TITLE": filter_unique_entities(entities, "TITLE"),
+        "FEATURING": filter_unique_entities(entities, "FEATURING"),
+        "MODIFIER": filter_unique_entities(entities, "MODIFIER"),
+        "VOCALOID": filter_unique_entities(entities, "VOCALOID"),
+        "MISC_PERSON": filter_unique_entities(entities, "MISC_PERSON"),
+        "VOCALIST": filter_unique_entities(entities, "VOCALIST"),
+        "ALT_TITLE": filter_unique_entities(entities, "ALT_TITLE"),
+        "ALBUM": filter_unique_entities(entities, "ALBUM"),
     }
 
     entities = [
