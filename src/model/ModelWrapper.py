@@ -42,7 +42,7 @@ class ModelWrapper:
                     "features": {0: "batch_size", 1: "sequence_length"},
                     "logits": {0: "batch_size", 1: "sequence_length"},
                 },
-                opset_version=17,
+                opset_version=18,
             )
 
             opt_model = optimizer.optimize_model(
