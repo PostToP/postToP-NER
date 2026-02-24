@@ -7,8 +7,7 @@ from flask_cors import CORS
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from transformers import AutoTokenizer
-
-from config.config import TABLE_BACK, TRANSFORMER_MODEL_NAME
+from config.config import TABLE_BACK, TRANSFORMER_MODEL_NAME, MODIFIER_LEMMAS
 from model.ModelWrapper import ModelWrapper
 
 
@@ -25,8 +24,13 @@ def unicode_to_utf16_index(text, unicode_index):
     return utf16_index
 
 
+def lemmatize_modifiers(text):
+    text_lower = text.lower()
+    return MODIFIER_LEMMAS.get(text_lower, text_lower)
+
+
 def extract_entities(
-    title: str, description: str
+    title: str, description: str, channel_name: str
 ) -> Tuple[List[Tuple], Dict[str, List[str]]]:
     text = title + " [SEP] " + description
 
@@ -112,17 +116,31 @@ def extract_entities(
             )
         )
 
+    me_stop_words = {"me", "myself", "i"}
+    filtered_entities = [
+        (tag, channel_name, start_char, end_char)
+        if entity_text.lower() in me_stop_words
+        else (tag, entity_text, start_char, end_char)
+        for tag, entity_text, start_char, end_char in entities
+    ]
+
     result = {
-        "ORIGINAL_AUTHOR": filter_unique_entities(entities, "ORIGINAL_AUTHOR"),
-        "TITLE": filter_unique_entities(entities, "TITLE"),
-        "FEATURING": filter_unique_entities(entities, "FEATURING"),
-        "MODIFIER": filter_unique_entities(entities, "MODIFIER"),
-        "VOCALOID": filter_unique_entities(entities, "VOCALOID"),
-        "MISC_PERSON": filter_unique_entities(entities, "MISC_PERSON"),
-        "VOCALIST": filter_unique_entities(entities, "VOCALIST"),
-        "ALT_TITLE": filter_unique_entities(entities, "ALT_TITLE"),
-        "ALBUM": filter_unique_entities(entities, "ALBUM"),
+        "ORIGINAL_AUTHOR": filter_unique_entities(filtered_entities, "ORIGINAL_AUTHOR"),
+        "TITLE": filter_unique_entities(filtered_entities, "TITLE"),
+        "FEATURING": filter_unique_entities(filtered_entities, "FEATURING"),
+        "MODIFIER": filter_unique_entities(filtered_entities, "MODIFIER"),
+        "VOCALOID": filter_unique_entities(filtered_entities, "VOCALOID"),
+        "MISC_PERSON": filter_unique_entities(filtered_entities, "MISC_PERSON"),
+        "VOCALIST": filter_unique_entities(filtered_entities, "VOCALIST"),
+        "ALT_TITLE": filter_unique_entities(filtered_entities, "ALT_TITLE"),
+        "ALBUM": filter_unique_entities(filtered_entities, "ALBUM"),
     }
+
+    result["MODIFIER"] = [
+        lemmatize_modifiers(modifier) for modifier in result["MODIFIER"]
+    ]
+
+    result["MODIFIER"] = [modifier.title() for modifier in result["MODIFIER"]]
 
     entities = [
         (
@@ -201,7 +219,8 @@ def predict():
         data = request.get_json()
         title = data.get("title", "")
         description = data.get("description", "")
-        entities, structured_result = extract_entities(title, description)
+        channel_name = data.get("channel_name", "")
+        entities, structured_result = extract_entities(title, description, channel_name)
         return jsonify(
             {
                 "prediction": {"entities": entities, "result": structured_result},
@@ -214,9 +233,7 @@ def predict():
         return jsonify({"error": str(e)}), 400
 
 
-def run_server() -> None:
-    app.run(host="0.0.0.0", port=5000)
-
-
 if __name__ == "__main__":
-    run_server()
+    from waitress import serve
+
+    serve(app, host="0.0.0.0", port=5000)

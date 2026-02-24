@@ -18,3 +18,11 @@ MAX_SEQUENCE_LENGTH = 512
 
 TRANSFORMER_MODEL_NAME = "distilbert/distilbert-base-multilingual-cased"
 VERSION = "v1.0.0"
+
+
+MODIFIER_LEMMAS = {
+    "covered": "cover",
+    "remixed": "remix",
+    "arranged": "arrange",
+    "rearranged": "rearrange",
+}
