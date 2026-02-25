@@ -2,7 +2,7 @@ from typing import Dict, List
 
 import numpy as np
 import torch
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, precision_score, recall_score
 from torch import nn
 from config.config import NUM_LABELS, TABLE_BACK, TRANSFORMER_MODEL_NAME
 
@@ -41,6 +41,12 @@ def _compute_f1(y_true: List[int], y_pred: List[int]) -> Dict[str, float]:
     labels = list(range(len(TABLE_BACK)))
     f1_micro = f1_score(y_true, y_pred, average="micro", labels=labels, zero_division=0)
     f1_macro = f1_score(y_true, y_pred, average="macro", labels=labels, zero_division=0)
+    precision = precision_score(
+        y_true, y_pred, average="weighted", labels=labels, zero_division=0
+    )
+    recall = recall_score(
+        y_true, y_pred, average="weighted", labels=labels, zero_division=0
+    )
     f1_weighted = f1_score(
         y_true,
         y_pred,
@@ -57,6 +63,8 @@ def _compute_f1(y_true: List[int], y_pred: List[int]) -> Dict[str, float]:
     )
 
     return {
+        "precision_weighted": float(precision),
+        "recall_weighted": float(recall),
         "f1_micro": float(f1_micro),
         "f1_macro": float(f1_macro),
         "f1_weighted": float(f1_weighted),
