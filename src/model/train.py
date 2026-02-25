@@ -76,6 +76,47 @@ def collate_fn(batch):
     }
 
 
+def get_bert_layerwise_lr_groups(bert_model, learning_rate=1e-5, layer_decay=0.9):
+    """
+    Gets parameter groups with decayed learning rate based on depth in network
+    Layers closer to output will have higher learning rate
+
+    Args:
+        bert_model: A huggingface bert-like model (should have embedding layer and encoder/transformer)
+        learning_rate: The learning rate at the output layer
+        layer_decay: How much to decay the learning rate per depth (recommended 0.9-0.95)
+    Returns:
+        grouped_parameters (list): list of parameters with their decayed learning rates
+    """
+
+    # Handle both BERT (encoder) and DistilBERT (transformer) architectures
+    if hasattr(bert_model, "encoder"):
+        layers = bert_model.encoder.layer
+    elif hasattr(bert_model, "transformer"):
+        layers = bert_model.transformer.layer
+    else:
+        raise AttributeError(
+            "Model must have either 'encoder' or 'transformer' attribute"
+        )
+
+    n_layers = len(layers) + 1  # + 1 (embedding)
+
+    embedding_decayed_lr = learning_rate * (layer_decay ** (n_layers + 1))
+    grouped_parameters = [
+        {"params": bert_model.embeddings.parameters(), "lr": embedding_decayed_lr}
+    ]
+    for depth in range(1, n_layers):
+        decayed_lr = learning_rate * (layer_decay ** (n_layers + 1 - depth))
+        grouped_parameters.append(
+            {
+                "params": layers[depth - 1].parameters(),
+                "lr": decayed_lr,
+            }
+        )
+
+    return grouped_parameters
+
+
 def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     if seed is None:
         seed = np.random.randint(0, 10000)
@@ -125,9 +166,16 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
 
     model = TransformerModel(num_labels=len(TABLE_BACK)).to(DEVICE)
 
-    LR = 1.2e-4
+    LR = 5e-4
     EPOCHS = 60
-    optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
+    lr_groups = get_bert_layerwise_lr_groups(
+        model.bert, learning_rate=LR / 2, layer_decay=0.9
+    )
+    lr_groups.append({"params": model.classifier.parameters(), "lr": LR})
+    optimizer = torch.optim.AdamW(
+        lr_groups,
+        weight_decay=1e-2,
+    )
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=0, num_training_steps=len(train_loader) * EPOCHS
     )
@@ -161,8 +209,6 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
             scaler.update()
 
             total_loss += loss.detach()
-            if progress_bar.n % 20 == 0:
-                progress_bar.set_postfix({"loss": loss.detach()})
 
         train_loss = total_loss.item() / len(train_loader)
         val_metrics = evaluate_model(model, val_loader)
