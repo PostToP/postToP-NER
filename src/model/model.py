@@ -14,7 +14,9 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class TransformerModel(nn.Module):
     def __init__(self, num_labels):
         super().__init__()
-        self.bert = AutoModel.from_pretrained(TRANSFORMER_MODEL_NAME)
+        self.bert = AutoModel.from_pretrained(
+            TRANSFORMER_MODEL_NAME, add_pooling_layer=False
+        )
         self.dropout = nn.Dropout(0.1)
         self.classifier = nn.Linear(self.bert.config.hidden_size, num_labels)
 
