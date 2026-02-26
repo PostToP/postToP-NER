@@ -190,7 +190,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
         model.train()
         total_loss = 0.0
 
-        progress_bar = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{EPOCHS}")
+        progress_bar = tqdm(train_loader, desc=f"Epoch {epoch}/{EPOCHS}")
         for batch in progress_bar:
             input_ids = batch["input_ids"].to(DEVICE)
             attention_mask = batch["attention_mask"].to(DEVICE)
