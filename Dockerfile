@@ -17,11 +17,15 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && apt-get purge -y --auto-remove build-essential
 
 
+COPY src/config/config.py ./src/config/config.py
+RUN python -c "from src.config.config import TRANSFORMER_MODEL_NAME; print(TRANSFORMER_MODEL_NAME)" \
+    && python -c "from src.config.config import TRANSFORMER_MODEL_NAME; from transformers import AutoTokenizer; AutoTokenizer.from_pretrained(TRANSFORMER_MODEL_NAME)"
 
 FROM python:3.11-slim AS production
 WORKDIR /app
 COPY --from=base /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
 COPY --from=base /usr/local/bin/ /usr/local/bin/
+COPY --from=base /root/.cache/huggingface/ /root/.cache/huggingface/
 
 COPY src/ ./src/
 COPY model/compiled_model.tar.gz ./model/compiled_model.tar.gz
