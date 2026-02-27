@@ -184,3 +184,7 @@ dataset/
 
 Dockerfile
 .dockerignore
+*.pth
+*.tar.gz
+*.log
+docs/
