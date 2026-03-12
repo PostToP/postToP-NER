@@ -141,7 +141,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     g = torch.Generator()
     g.manual_seed(seed)
 
-    BATCH_SIZE = 96
+    BATCH_SIZE = 32 + 16
 
     train_loader = DataLoader(
         train_dataset,
@@ -167,7 +167,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     model = TransformerModel(num_labels=len(TABLE_BACK)).to(DEVICE)
 
     LR = 5e-4
-    EPOCHS = 60
+    EPOCHS = 25
     lr_groups = get_bert_layerwise_lr_groups(
         model.bert, learning_rate=LR / 2, layer_decay=0.9
     )
@@ -175,9 +175,6 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     optimizer = torch.optim.AdamW(
         lr_groups,
         weight_decay=1e-2,
-    )
-    scheduler = get_linear_schedule_with_warmup(
-        optimizer, num_warmup_steps=0, num_training_steps=len(train_loader) * EPOCHS
     )
     criterion = torch.nn.CrossEntropyLoss(ignore_index=-100)
     scaler = GradScaler()
@@ -212,7 +209,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
 
         train_loss = total_loss.item() / len(train_loader)
         val_metrics = evaluate_model(model, val_loader)
-        scheduler.step()
+        # scheduler.step()
 
         if verbose:
             print(
