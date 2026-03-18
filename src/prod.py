@@ -185,20 +185,24 @@ def filter_unique_entities(decoded_tags: List[Tuple], tag_to_filter: str) -> Lis
         return []
 
     # Filter duplicates using TF-IDF similarity
-    unique_entities = entities
-    vectorizer = TfidfVectorizer(analyzer="char", lowercase=True)
-    vectorizer.fit(unique_entities)
-    vectors = vectorizer.transform(unique_entities)
-    similarity_matrix = cosine_similarity(vectors)
-    threshold = 0.5
-    to_remove = set()
-    for i in range(len(unique_entities)):
-        for j in range(i + 1, len(unique_entities)):
-            if similarity_matrix[i, j] > threshold:
-                to_remove.add(j)
-    unique_entities = [
-        entity for idx, entity in enumerate(unique_entities) if idx not in to_remove
-    ]
+    try:
+        unique_entities = entities
+        vectorizer = TfidfVectorizer(analyzer="char", lowercase=True)
+        vectorizer.fit(unique_entities)
+        vectors = vectorizer.transform(unique_entities)
+        similarity_matrix = cosine_similarity(vectors)
+        threshold = 0.5
+        to_remove = set()
+        for i in range(len(unique_entities)):
+            for j in range(i + 1, len(unique_entities)):
+                if similarity_matrix[i, j] > threshold:
+                    to_remove.add(j)
+        unique_entities = [
+            entity for idx, entity in enumerate(unique_entities) if idx not in to_remove
+        ]
+    except Exception as e:
+        print(f"Error during TF-IDF filtering: {e}")
+        unique_entities = list(set(entities))
 
     # Further filter using Levenshtein distance
     filtered_entities = []
