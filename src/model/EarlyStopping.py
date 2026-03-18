@@ -3,7 +3,7 @@ class EarlyStopping:
         self.patience = patience
         self.min_delta = min_delta
         self.counter = 0
-        self.best_score = float("-inf")
+        self.best_score = float("inf")
         self.early_stop = False
 
     def __call__(self, score: float) -> bool:
@@ -11,7 +11,7 @@ class EarlyStopping:
             self.best_score = score
             return False
 
-        if score < self.best_score + self.min_delta:
+        if score > self.best_score - self.min_delta:
             self.counter += 1
             if self.counter >= self.patience:
                 self.early_stop = True

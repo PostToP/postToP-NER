@@ -166,7 +166,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
 
     model = TransformerModel(num_labels=len(TABLE_BACK)).to(DEVICE)
 
-    LR = 2e-4
+    LR = 1e-4
     EPOCHS = 25
     lr_groups = get_bert_layerwise_lr_groups(
         model.bert, learning_rate=LR / 2, layer_decay=0.9
@@ -174,12 +174,12 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     lr_groups.append({"params": model.classifier.parameters(), "lr": LR})
     optimizer = torch.optim.AdamW(
         lr_groups,
-        weight_decay=1e-2,
+        weight_decay=1e-1,
     )
     criterion = torch.nn.CrossEntropyLoss(ignore_index=-100)
     scaler = GradScaler()
 
-    early_stopping = EarlyStopping(patience=3, min_delta=0.010)
+    early_stopping = EarlyStopping(patience=3, min_delta=0.001)
 
     best_state = None
 
@@ -216,9 +216,9 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
                 f"Epoch {epoch:04d} | train_loss {train_loss:.4f} | val_loss {val_metrics['loss']:.4f} | val_f1_micro {val_metrics['f1_micro']:.4f} | val_f1_macro {val_metrics['f1_macro']:.4f} | val_acc {val_metrics['accuracy']:.4f}"
             )
 
-        if val_metrics["f1_macro"] > early_stopping.best_score:
+        if val_metrics["loss"] < early_stopping.best_score:
             best_state = {k: v.cpu() for k, v in model.state_dict().items()}
-        if early_stopping(val_metrics["f1_macro"]):
+        if early_stopping(val_metrics["loss"]):
             if verbose:
                 print("Early stopping triggered.")
             break
