@@ -166,7 +166,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
 
     model = TransformerModel(num_labels=len(TABLE_BACK)).to(DEVICE)
 
-    LR = 5e-4
+    LR = 2e-4
     EPOCHS = 25
     lr_groups = get_bert_layerwise_lr_groups(
         model.bert, learning_rate=LR / 2, layer_decay=0.9
@@ -179,7 +179,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     criterion = torch.nn.CrossEntropyLoss(ignore_index=-100)
     scaler = GradScaler()
 
-    early_stopping = EarlyStopping(patience=3, min_delta=0.000)
+    early_stopping = EarlyStopping(patience=3, min_delta=0.010)
 
     best_state = None
 
