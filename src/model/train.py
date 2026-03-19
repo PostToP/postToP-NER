@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import torch
+import signal
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 from transformers import get_linear_schedule_with_warmup
@@ -116,20 +117,21 @@ def get_bert_layerwise_lr_groups(bert_model, learning_rate=1e-5, layer_decay=0.9
 
     return grouped_parameters
 
+
 def get_class_weights(train_loader, num_classes, ignore_index=-100):
     class_counts = torch.zeros(num_classes)
-    
+
     for batch in train_loader:
         labels = batch["labels"].view(-1)
         valid_labels = labels[labels != ignore_index]
         counts = torch.bincount(valid_labels, minlength=num_classes)
         class_counts += counts.cpu()
-        
-    class_counts[class_counts == 0] = 1.0 
-    
+
+    class_counts[class_counts == 0] = 1.0
+
     total_samples = class_counts.sum()
     class_weights = total_samples / (num_classes * class_counts)
-    
+
     return class_weights
 
 
@@ -137,6 +139,21 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     if seed is None:
         seed = np.random.randint(0, 10000)
     set_seed(seed)
+
+    stop_requested = False
+
+    def _request_stop(signum, frame):
+        nonlocal stop_requested
+        stop_requested = True
+        if verbose:
+            print(
+                "\nStop signal received (Ctrl+X/Ctrl+C). Finishing current batch and exiting training loop."
+            )
+
+    previous_sigint = signal.getsignal(signal.SIGINT)
+    previous_sigterm = signal.getsignal(signal.SIGTERM)
+    signal.signal(signal.SIGINT, _request_stop)
+    signal.signal(signal.SIGTERM, _request_stop)
 
     train_df = pd.read_json("dataset/p5_dataset_train.json")
     train_df = train_df.sample(frac=1).sort_values(
@@ -201,45 +218,66 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
 
     best_state = None
 
-    for epoch in range(1, EPOCHS + 1):
-        model.train()
-        total_loss = 0.0
+    try:
+        for epoch in range(1, EPOCHS + 1):
+            if stop_requested:
+                break
 
-        progress_bar = tqdm(train_loader, desc=f"Epoch {epoch}/{EPOCHS}")
-        for batch in progress_bar:
-            input_ids = batch["input_ids"].to(DEVICE)
-            attention_mask = batch["attention_mask"].to(DEVICE)
-            features = batch["features"].to(DEVICE)
-            labels = batch["labels"].to(DEVICE)
-            optimizer.zero_grad()
+            model.train()
+            total_loss = 0.0
 
-            with autocast("cuda"):
-                logits = model(input_ids, attention_mask, features)
-                loss = criterion(logits.view(-1, len(TABLE)), labels.view(-1))
+            progress_bar = tqdm(train_loader, desc=f"Epoch {epoch}/{EPOCHS}")
+            for batch in progress_bar:
+                input_ids = batch["input_ids"].to(DEVICE)
+                attention_mask = batch["attention_mask"].to(DEVICE)
+                features = batch["features"].to(DEVICE)
+                labels = batch["labels"].to(DEVICE)
+                optimizer.zero_grad()
 
-            scaler.scale(loss).backward()
-            scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            scaler.step(optimizer)
-            scaler.update()
+                with autocast("cuda"):
+                    logits = model(input_ids, attention_mask, features)
+                    loss = criterion(logits.view(-1, len(TABLE)), labels.view(-1))
 
-            total_loss += loss.detach()
+                scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                scaler.step(optimizer)
+                scaler.update()
 
-        train_loss = total_loss.item() / len(train_loader)
-        val_metrics = evaluate_model(model, val_loader)
-        # scheduler.step()
+                total_loss += loss.detach()
 
+                if stop_requested:
+                    break
+
+            if stop_requested:
+                if verbose:
+                    print("Stopping training loop early; keeping last best checkpoint.")
+                break
+
+            train_loss = total_loss.item() / len(train_loader)
+            val_metrics = evaluate_model(model, val_loader)
+            # scheduler.step()
+
+            if verbose:
+                print(
+                    f"Epoch {epoch:04d} | train_loss {train_loss:.4f} | val_loss {val_metrics['loss']:.4f} | val_f1_micro {val_metrics['f1_micro']:.4f} | val_f1_macro {val_metrics['f1_macro']:.4f} | val_acc {val_metrics['accuracy']:.4f}"
+                )
+
+            if val_metrics["loss"] < early_stopping.best_score:
+                best_state = {k: v.cpu() for k, v in model.state_dict().items()}
+            if early_stopping(val_metrics["loss"]):
+                if verbose:
+                    print("Early stopping triggered.")
+                break
+    except KeyboardInterrupt:
+        stop_requested = True
         if verbose:
             print(
-                f"Epoch {epoch:04d} | train_loss {train_loss:.4f} | val_loss {val_metrics['loss']:.4f} | val_f1_micro {val_metrics['f1_micro']:.4f} | val_f1_macro {val_metrics['f1_macro']:.4f} | val_acc {val_metrics['accuracy']:.4f}"
+                "\nKeyboard interrupt received. Exiting early and keeping last best checkpoint."
             )
-
-        if val_metrics["loss"] < early_stopping.best_score:
-            best_state = {k: v.cpu() for k, v in model.state_dict().items()}
-        if early_stopping(val_metrics["loss"]):
-            if verbose:
-                print("Early stopping triggered.")
-            break
+    finally:
+        signal.signal(signal.SIGINT, previous_sigint)
+        signal.signal(signal.SIGTERM, previous_sigterm)
 
     if best_state is not None:
         model.load_state_dict(best_state)
