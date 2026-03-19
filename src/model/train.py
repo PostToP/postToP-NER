@@ -116,6 +116,22 @@ def get_bert_layerwise_lr_groups(bert_model, learning_rate=1e-5, layer_decay=0.9
 
     return grouped_parameters
 
+def get_class_weights(train_loader, num_classes, ignore_index=-100):
+    class_counts = torch.zeros(num_classes)
+    
+    for batch in train_loader:
+        labels = batch["labels"].view(-1)
+        valid_labels = labels[labels != ignore_index]
+        counts = torch.bincount(valid_labels, minlength=num_classes)
+        class_counts += counts.cpu()
+        
+    class_counts[class_counts == 0] = 1.0 
+    
+    total_samples = class_counts.sum()
+    class_weights = total_samples / (num_classes * class_counts)
+    
+    return class_weights
+
 
 def run_with_seed(seed: int = None, verbose: bool = True) -> float:
     if seed is None:
@@ -166,7 +182,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
 
     model = TransformerModel(num_labels=len(TABLE_BACK)).to(DEVICE)
 
-    LR = 1e-4
+    LR = 8e-5
     EPOCHS = 25
     lr_groups = get_bert_layerwise_lr_groups(
         model.bert, learning_rate=LR / 2, layer_decay=0.9
@@ -176,7 +192,9 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
         lr_groups,
         weight_decay=1e-1,
     )
-    criterion = torch.nn.CrossEntropyLoss(ignore_index=-100)
+    calculated_weight = get_class_weights(train_loader, len(TABLE_BACK))
+    calculated_weight = calculated_weight.to(DEVICE)
+    criterion = torch.nn.CrossEntropyLoss(ignore_index=-100, weight=calculated_weight)
     scaler = GradScaler()
 
     early_stopping = EarlyStopping(patience=3, min_delta=0.001)
@@ -235,6 +253,7 @@ def run_with_seed(seed: int = None, verbose: bool = True) -> float:
 
 def main() -> None:
     SEEDS = [42, 123, 2024, 7, 999]
+    # SEEDS = [42]
     f1_macros = []
     best_model = None
     for seed in SEEDS:
