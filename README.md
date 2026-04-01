@@ -66,3 +66,10 @@ Request body:
 docker build -t ai-ner .
 docker run --rm -p 5000:5000 ai-ner
 ```
+
+Or pull and run the published image:
+
+```bash
+docker pull ghcr.io/posttop/ai-ner:latest
+docker run --rm -p 5000:5000 ghcr.io/posttop/ai-ner:latest
+```
